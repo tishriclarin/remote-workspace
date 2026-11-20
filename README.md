@@ -4,7 +4,7 @@ SSH Workspace is a local plugin for ChatGPT and Codex. Its MCP server runs over 
 
 ## Local setup
 
-This build targets Linux with Python 3.12 or later, OpenSSH Client 9.2 or later at `/usr/bin/ssh`, and `/usr/bin/sshpass` for password profiles. On Debian 13, install the appropriate packages.
+On Linux, use Python 3.12 or later and your distribution's supported OpenSSH client. The plugin finds `ssh` on its local `PATH`. Password profiles also require `sshpass` on that path. The same source package works with native Python dependencies on each architecture. If you already have Python and OpenSSH, reuse them. On Debian 13, install any missing packages as needed.
 
 ```bash
 sudo apt install python3 python3-venv openssh-client sshpass
@@ -60,8 +60,10 @@ python vault_admin.py put branch-linux --bind-interface enp3s0 \
 
 In chat, ask to apply a setting for a single check, for example “Check SSH to branch-linux once using local source IP 192.0.2.5 and cipher aes256-ctr.” Use an address actually assigned to the local machine. Single-check options leave the profile intact. To change the destination, port, account, or credentials, edit the saved profile locally. Strict host-key verification applies to every connection.
 
+OpenSSH negotiates using its own defaults unless you supply an override. The installed client must support any selected option and algorithm. For example, `ssh -Q cipher`, `ssh -Q kex`, and `ssh -Q mac` list what the client knows. An explicit override can still fail if the remote host does not offer a matching algorithm.
+
 ## Verify and package
 
-Run `python3 -m unittest discover -s tests -v` from the source directory. Build the plugin ZIP with `python3 package_plugin.py --output ssh-workspace-0.2.0.zip`. For a distributable build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Confirm that the target system provides the documented OpenSSH tools and exercise a clean desktop install.
+Run `python3 -m unittest discover -s tests -v` from the source directory. Build the portable source ZIP with `python3 package_plugin.py --output ssh-workspace-0.2.1.zip`. For an offline build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Both packaging modes use the installed OpenSSH client. OpenSSH and sshpass are outside the package.
 
 Public directory submission for this execution model is [desktop-only](https://developers.openai.com/plugins/deploy/desktop-only). OpenAI requires the submitting organization to be approved for local MCP submissions.

@@ -4,6 +4,7 @@ import asyncio
 import math
 import os
 import re
+import shutil
 import signal
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -21,18 +22,28 @@ READ_ONLY = ToolAnnotations(
 )
 
 
-def ssh_args(host: Host, command: str) -> list[str]:
+class SSHClientUnavailable(ToolError):
+    pass
+
+
+def local_executable(name: str) -> str:
+    path = shutil.which(name)
+    if path is None:
+        raise SSHClientUnavailable(f"The local plugin cannot find {name} on PATH.")
+    return path
+
+
+def ssh_args(host: Host, command: str, executable: str = "ssh") -> list[str]:
     argv = [
-        "/usr/bin/ssh", "-F", "/dev/null", "-n", "-T",
+        executable, "-F", os.devnull, "-n", "-T",
         "-o", "StrictHostKeyChecking=yes",
         "-o", "UpdateHostKeys=no",
-        "-o", "GlobalKnownHostsFile=/dev/null",
+        "-o", f"GlobalKnownHostsFile={os.devnull}",
         "-o", f"UserKnownHostsFile={host.known_hosts_file}",
         "-o", "IdentityAgent=none",
         "-o", "ClearAllForwardings=yes",
         "-o", "ForwardAgent=no",
         "-o", f"ConnectTimeout={host.connect_timeout}",
-        "-o", "ChannelTimeout=session=8s",
         "-o", f"Compression={'yes' if host.protocol_compression else 'no'}",
         "-o", f"PreferredAuthentications={host.auth}",
         "-o", "KbdInteractiveAuthentication=no",
@@ -48,7 +59,7 @@ def ssh_args(host: Host, command: str) -> list[str]:
         ("KexAlgorithms", host.kex_algorithms),
         ("MACs", host.macs),
         ("HostKeyAlgorithms", host.host_key_algorithms),
-        ("PubkeyAcceptedAlgorithms", host.pubkey_algorithms),
+        ("PubkeyAcceptedKeyTypes", host.pubkey_algorithms),
     ):
         if algorithms is not None:
             argv += ["-o", f"{option}={','.join(algorithms)}"]
@@ -61,16 +72,17 @@ def ssh_args(host: Host, command: str) -> list[str]:
 
 @contextmanager
 def ssh_process_args(host: Host, command: str):
-    argv = ssh_args(host, command)
+    argv = ssh_args(host, command, local_executable("ssh"))
     if host.password is None:
         yield argv, ()
         return
 
+    sshpass = local_executable("sshpass")
     read_fd, write_fd = os.pipe()
     try:
         with os.fdopen(write_fd, "wb") as pipe:
             pipe.write(host.password.get_secret_value().encode() + b"\n")
-        yield ["/usr/bin/sshpass", "-d", str(read_fd), *argv], (read_fd,)
+        yield [sshpass, "-d", str(read_fd), *argv], (read_fd,)
     finally:
         os.close(read_fd)
 
@@ -173,6 +185,8 @@ def build_server(load_inventory: Callable[[], Inventory]) -> FastMCP:
         profile = saved_host(host, overrides)
         try:
             await check(profile, "true")
+        except SSHClientUnavailable:
+            raise
         except ToolError:
             return Connection(host=host, status="unavailable")
         return Connection(host=host, status="connected")

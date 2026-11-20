@@ -5,13 +5,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from cryptography.fernet import Fernet
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from pydantic import ValidationError
 
-from server import ssh_args, ssh_process_args
+from server import SSHClientUnavailable, ssh_args, ssh_process_args
 from vault import ConnectionOptions, Host, Inventory, Vault, VaultError
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -50,14 +51,27 @@ class VaultTests(unittest.TestCase):
 
     def test_password_is_delivered_only_through_anonymous_pipe(self):
         profile = key_profile(identity_file=None, password="test-password", auth="password")
-        with ssh_process_args(profile, "true") as (argv, descriptors):
-            self.assertEqual(argv[:3], ["/usr/bin/sshpass", "-d", str(descriptors[0])])
+        with patch("server.shutil.which", side_effect=lambda name: f"/test/bin/{name}"), \
+             ssh_process_args(profile, "true") as (argv, descriptors):
+            self.assertEqual(argv[:4], ["/test/bin/sshpass", "-d", str(descriptors[0]), "/test/bin/ssh"])
             self.assertNotIn("test-password", json.dumps(argv))
             self.assertEqual(os.read(descriptors[0], 100), b"test-password\n")
             self.assertIn("StrictHostKeyChecking=yes", argv)
             self.assertIn("PreferredAuthentications=password", argv)
         with self.assertRaises(OSError):
             os.fstat(descriptors[0])
+
+    def test_key_profile_reuses_ssh_from_path_without_sshpass(self):
+        with patch("server.shutil.which", return_value="/local/bin/ssh") as find:
+            with ssh_process_args(key_profile(), "true") as (argv, descriptors):
+                self.assertEqual(argv[0], "/local/bin/ssh")
+                self.assertEqual(descriptors, ())
+                self.assertNotIn("ChannelTimeout=session=8s", argv)
+            find.assert_called_once_with("ssh")
+        with patch("server.shutil.which", return_value=None):
+            with self.assertRaisesRegex(SSHClientUnavailable, "cannot find ssh on PATH"), \
+                 ssh_process_args(key_profile(), "true"):
+                self.fail("An SSH process cannot start without the system client")
 
     def test_ciphers_certificate_and_source_are_passed_as_individual_arguments(self):
         profile = key_profile(
@@ -70,7 +84,7 @@ class VaultTests(unittest.TestCase):
         for option in (
             "CertificateFile=/keys/id-cert.pub", "Ciphers=aes256-ctr",
             "KexAlgorithms=curve25519-sha256", "MACs=hmac-sha2-256",
-            "HostKeyAlgorithms=ssh-ed25519", "PubkeyAcceptedAlgorithms=ssh-ed25519-cert-v01@openssh.com",
+            "HostKeyAlgorithms=ssh-ed25519", "PubkeyAcceptedKeyTypes=ssh-ed25519-cert-v01@openssh.com",
             "StrictHostKeyChecking=yes", "IdentityAgent=none",
         ):
             self.assertIn(option, argv)

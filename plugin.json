@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "ssh-workspace",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Run SSH diagnostics from your computer using profiles stored in an encrypted local vault.",
   "extensions": {
     "com.openai": {
@@ -18,7 +18,7 @@
         ]
       },
       "publication": {
-        "release_notes": "Local SSH execution, encrypted host profiles, password and certificate support, and per-check connection overrides."
+        "release_notes": "Reuse the host's OpenSSH client and optional sshpass from PATH. The source package is independent of CPU architecture."
       }
     }
   }
