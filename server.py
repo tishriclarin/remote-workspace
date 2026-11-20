@@ -15,6 +15,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ValidationError
 
+from ssh_clients import selected_executable
 from vault import Alias, ConnectionOptions, Group, Host, Inventory, Vault
 
 READ_ONLY = ToolAnnotations(
@@ -27,7 +28,10 @@ class SSHClientUnavailable(ToolError):
 
 
 def local_executable(name: str) -> str:
-    path = shutil.which(name)
+    try:
+        path = selected_executable() if name == "ssh" else shutil.which(name)
+    except (OSError, ValueError) as error:
+        raise SSHClientUnavailable(str(error)) from None
     if path is None:
         raise SSHClientUnavailable(f"The local plugin cannot find {name} on PATH.")
     return path

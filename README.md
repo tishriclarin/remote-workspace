@@ -4,7 +4,7 @@ SSH Workspace is a local plugin for ChatGPT and Codex. Its MCP server runs over 
 
 ## Local setup
 
-On Linux, use Python 3.12 or later and your distribution's supported OpenSSH client. The plugin finds `ssh` on its local `PATH`. Password profiles also require `sshpass` on that path. The same source package works with native Python dependencies on each architecture. If you already have Python and OpenSSH, reuse them. On Debian 13, install any missing packages as needed.
+On Linux, use Python 3.12 or later and your distribution's supported OpenSSH client. The plugin defaults to the newest usable stable OpenSSH client it knows about, including the system `ssh` on its local `PATH`. Password profiles also require `sshpass` on that path. The same source package works with native Python dependencies on each architecture. If you already have Python and OpenSSH, reuse them. On Debian 13, install any missing packages as needed.
 
 ```bash
 sudo apt install python3 python3-venv openssh-client sshpass
@@ -62,8 +62,35 @@ In chat, ask to apply a setting for a single check, for example “Check SSH to 
 
 OpenSSH negotiates using its own defaults unless you supply an override. The installed client must support any selected option and algorithm. For example, `ssh -Q cipher`, `ssh -Q kex`, and `ssh -Q mac` list what the client knows. An explicit override can still fail if the remote host does not offer a matching algorithm.
 
+## Choose or update the native client
+
+Run `python3 ssh_clients.py ui` from the unpacked plugin folder to open the local client selector. The GUI uses Tkinter (`python3-tk` on Debian and Ubuntu). **Refresh client cache** rechecks the registered executables and the system client. **Get native stable client** downloads the current `openssh-client` candidate from your configured Debian or Ubuntu APT repositories for the CPU architecture reported by `dpkg`. It uses APT verification and retains one managed `ssh` executable. It requires no root privileges and does not change system packages. Keep your APT package lists current. If the downloaded client needs system libraries that are missing, use the native package manager to install them.
+
+Development, stable, and old-stable are labels for registered local clients. For each label, refresh keeps the newest available entry for each of the newest four distinct major versions. No binaries are copied from another CPU architecture. Use package-manager installs or vendor-distributed native builds for additional versions and use **Add native client** to register them. Only register executables you trust. Selecting **System client on PATH** pins the system source. Selecting **Latest available stable** follows the highest stable version available locally.
+
+```bash
+python3 ssh_clients.py fetch-native
+python3 ssh_clients.py register /opt/openssh-dev/bin/ssh --track development
+python3 ssh_clients.py refresh
+python3 ssh_clients.py list
+python3 ssh_clients.py select latest
+```
+
+## Enroll SSH authentication
+
+Run the enrollment commands from a local terminal. The saved profile supplies the destination, port, and pinned host-key file. Log in with an existing account credential. Supply `--bootstrap-key /path/to/existing-key` before the action if needed. For a regular key, the script reuses the system `ssh-copy-id` helper.
+
+```bash
+python3 enroll.py branch-linux key ~/.ssh/id_ed25519.pub
+python3 enroll.py branch-linux certificate \
+  --certificate ~/.ssh/id_ed25519-cert.pub \
+  --ca-public-key ~/.ssh/user-ca.pub --principal operator
+```
+
+Certificate enrollment checks the certificate type, CA fingerprint, and named principal using `ssh-keygen`. It installs a restricted, principal-scoped CA public key in the saved account's `~/.ssh/authorized_keys`. It requires a remote Linux shell with `flock` and an account permitted to write that file. The user certificate and its private key remain on the local client. Future certificates signed by the same CA for that principal are accepted for that account, subject to the server configuration. Use a dedicated CA and principal as appropriate.
+
 ## Verify and package
 
-Run `python3 -m unittest discover -s tests -v` from the source directory. Build the portable source ZIP with `python3 package_plugin.py --output ssh-workspace-0.2.1.zip`. For an offline build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Both packaging modes use the installed OpenSSH client. OpenSSH and sshpass are outside the package.
+Run `python3 -m unittest discover -s tests -v` from the source directory. Build the portable source ZIP with `python3 package_plugin.py --output ssh-workspace-0.3.0.zip`. For an offline build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Both packaging modes use the installed OpenSSH client. OpenSSH and sshpass are supplied by the local OS or registered native installs.
 
 Public directory submission for this execution model is [desktop-only](https://developers.openai.com/plugins/deploy/desktop-only). OpenAI requires the submitting organization to be approved for local MCP submissions.

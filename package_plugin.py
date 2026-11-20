@@ -10,6 +10,7 @@ FILES = (
     "mcp.json", "README.md", "requirements.txt", "launch.py", "local_paths.py", "server.py",
     "vault.py", "vault_admin.py", "ssh-diagnostics.sh", "assets/icon.svg",
     "package_plugin.py", "tests/test_server.py",
+    "ssh_clients.py", "enroll.py", "tests/test_clients_and_enroll.py",
 )
 
 
