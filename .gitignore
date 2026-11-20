@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+vendor/
+*.zip
+*.vault
+*.vault.lock
+*.key
+.env

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ssh-workspace",
+  "version": "0.2.0",
+  "description": "Run SSH diagnostics from your computer using profiles stored in an encrypted local vault.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "SSH Workspace",
+        "shortDescription": "Local SSH diagnostics",
+        "longDescription": "Keep SSH host profiles in a local encrypted vault. List aliases by group and check connectivity, platform, or Linux uptime from your computer. Connect with a key, OpenSSH user certificate, or saved password. Override the source binding and negotiation settings for individual checks.",
+        "category": "Developer Tools",
+        "logo": "./assets/icon.svg",
+        "composerIcon": "./assets/icon.svg",
+        "defaultPrompt": [
+          "List the SSH hosts in my Lab group.",
+          "Check SSH connectivity to my saved Debian host."
+        ]
+      },
+      "publication": {
+        "release_notes": "Local SSH execution, encrypted host profiles, password and certificate support, and per-check connection overrides."
+      }
+    }
+  }
+}
