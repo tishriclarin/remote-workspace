@@ -11,11 +11,13 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from activity import log_activity, read_history
 from local_paths import config_directory
 
 TRACKS = ("development", "stable", "old-stable")
 DEFAULTS = ("latest", "system")
 VERSION = re.compile(r"\bOpenSSH_(\d+)\.(\d+)(?:p(\d+))?(?=[^0-9]|$)")
+PROFILE_FIELDS = frozenset({"connect_timeout", "protocol_compression", "bind_address", "bind_interface"})
 
 
 def read_state():
@@ -100,7 +102,34 @@ def select(choice):
     return change_state(update)
 
 
+def validate_profile_defaults(values):
+    from vault import ConnectionOptions
+
+    if not isinstance(values, dict) or not values.keys() <= PROFILE_FIELDS:
+        raise ValueError("Use a JSON object with only connect_timeout, protocol_compression, bind_address, or bind_interface.")
+    return ConnectionOptions.model_validate(values, strict=True).model_dump(mode="json", exclude_unset=True)
+
+
+def profile_defaults():
+    return validate_profile_defaults(json.loads(read_state()).get("profile_defaults", {}))
+
+
+def save_profile_defaults(raw):
+    values = validate_profile_defaults(json.loads(raw))
+    return change_state(lambda state: state.update(profile_defaults=values))
+
+
 def fetch_native():
+    try:
+        state = download_native()
+    except (OSError, ValueError, subprocess.SubprocessError):
+        log_activity("fetch_native_client", "failed")
+        raise
+    log_activity("fetch_native_client", "completed")
+    return state
+
+
+def download_native():
     tools = [shutil.which(name) for name in ("apt-get", "dpkg", "dpkg-deb")]
     if not all(tools):
         raise ValueError("Native downloads use Debian or Ubuntu APT. Register a native client from your own package manager.")
@@ -154,15 +183,17 @@ def selected_executable():
     choice = state["selection"]
     available = [entry for entry in state["cache"] if os.access(entry["path"], os.X_OK)]
     if choice == "system":
+        if system:
+            validate_system_client(system)
         return system
     if choice == "latest":
         stable = [entry for entry in available if entry["track"] == "stable"]
         if system:
             try:
-                stable.append(inspect_client(system, "stable"))
-            except (OSError, ValueError, subprocess.SubprocessError):
+                stable.append(validate_system_client(system))
+            except ValueError:
                 if not stable:
-                    return system
+                    raise
         latest = max(stable, key=lambda entry: entry["order"], default=None)
         return latest["path"] if latest else None
     for entry in available:
@@ -171,12 +202,29 @@ def selected_executable():
     raise ValueError("The selected OpenSSH client is unavailable. Refresh the cache and select a client.")
 
 
+def validate_system_client(path):
+    try:
+        return inspect_client(path, "stable")
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        raise ValueError("The system SSH executable could not be verified as OpenSSH.") from error
+
+
+def refresh_cache():
+    try:
+        state = change_state(refresh)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        log_activity("refresh_client_cache", "failed")
+        raise
+    log_activity("refresh_client_cache", "completed")
+    return state
+
+
 def show_ui():
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
 
     root = tk.Tk()
-    root.title("SSH Workspace Clients")
+    root.title("SSH Workspace Settings")
     panel = ttk.Frame(root, padding=16)
     panel.pack(fill="both", expand=True)
     choice = tk.StringVar()
@@ -187,6 +235,10 @@ def show_ui():
     ttk.Label(panel, text="OpenSSH client").pack(anchor="w")
     menu = ttk.Combobox(panel, textvariable=choice, state="readonly", width=56)
     menu.pack(fill="x", pady=(4, 8))
+    general = ttk.Frame(panel)
+    ttk.Label(general, text="Defaults for new host profiles (JSON)").pack(anchor="w")
+    editor = tk.Text(general, width=56, height=7, wrap="none")
+    editor.pack(fill="x", pady=(4, 8))
 
     def render(state):
         labels.clear()
@@ -203,6 +255,27 @@ def show_ui():
             render(action())
         except (OSError, ValueError, subprocess.SubprocessError) as error:
             messagebox.showerror("SSH Workspace", str(error), parent=root)
+
+    def open_general():
+        if general.winfo_manager():
+            general.pack_forget()
+            return
+        editor.delete("1.0", "end")
+        editor.insert("1.0", json.dumps(json.loads(read_state()).get("profile_defaults", {}), indent=2))
+        general.pack(fill="x", pady=(8, 0))
+
+    def show_history():
+        try:
+            events = read_history()
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
+            messagebox.showerror("SSH Workspace History", str(error), parent=root)
+            return
+        window = tk.Toplevel(root)
+        window.title("SSH Workspace History")
+        history = tk.Text(window, width=88, height=18, wrap="word")
+        history.pack(fill="both", expand=True, padx=12, pady=12)
+        history.insert("1.0", events)
+        history.configure(state="disabled")
 
     def add_client():
         path = filedialog.askopenfilename(title="Select an installed OpenSSH executable", parent=root)
@@ -224,14 +297,19 @@ def show_ui():
         root.after(100, finish)
 
     menu.bind("<<ComboboxSelected>>", lambda _: run(lambda: select(labels[choice.get()])))
-    ttk.Button(panel, text="Refresh client cache", command=lambda: run(lambda: change_state(refresh))).pack(anchor="w")
-    buttons = ttk.Frame(panel)
+    ttk.Button(panel, text="General Settings", command=open_general).pack(anchor="w")
+    ttk.Button(general, text="Save defaults", command=lambda: run(
+        lambda: save_profile_defaults(editor.get("1.0", "end"))
+    )).pack(anchor="w", pady=(0, 8))
+    ttk.Button(general, text="Refresh client cache", command=lambda: run(refresh_cache)).pack(anchor="w")
+    buttons = ttk.Frame(general)
     buttons.pack(anchor="w", pady=8)
     ttk.Combobox(buttons, textvariable=track, state="readonly", values=TRACKS, width=14).pack(side="left")
     ttk.Button(buttons, text="Add native client", command=add_client).pack(side="left", padx=8)
-    download_button = ttk.Button(panel, text="Get native stable client", command=download)
+    download_button = ttk.Button(general, text="Get native stable client", command=download)
     download_button.pack(anchor="w")
-    ttk.Label(panel, textvariable=status).pack(anchor="w")
+    ttk.Button(general, text="View activity history", command=show_history).pack(anchor="w", pady=(8, 0))
+    ttk.Label(general, textvariable=status).pack(anchor="w")
     render(json.loads(read_state()))
     root.mainloop()
     executor.shutdown(wait=False)
@@ -244,6 +322,10 @@ def main():
     commands.add_parser("refresh")
     commands.add_parser("list")
     commands.add_parser("fetch-native")
+    history = commands.add_parser("history")
+    history.add_argument("--lines", type=int, default=50)
+    defaults = commands.add_parser("defaults")
+    defaults.add_argument("json", nargs="?")
     addition = commands.add_parser("register")
     addition.add_argument("path")
     addition.add_argument("--track", choices=TRACKS, required=True)
@@ -254,8 +336,16 @@ def main():
         if args.action == "ui":
             show_ui()
             return
+        if args.action == "history":
+            print(read_history(args.lines))
+            return
+        if args.action == "defaults":
+            values = (save_profile_defaults(args.json)["profile_defaults"]
+                      if args.json is not None else profile_defaults())
+            print(json.dumps(values, indent=2))
+            return
         if args.action == "refresh":
-            state = change_state(refresh)
+            state = refresh_cache()
         elif args.action == "fetch-native":
             state = fetch_native()
         elif args.action == "register":

@@ -8,9 +8,10 @@ from zipfile import ZIP_DEFLATED, ZipFile
 ROOT = Path(__file__).resolve().parent
 FILES = (
     "mcp.json", "README.md", "requirements.txt", "launch.py", "local_paths.py", "server.py",
-    "vault.py", "vault_admin.py", "ssh-diagnostics.sh", "assets/icon.svg",
+    "vault.py", "vault_admin.py", "ssh-diagnostics.sh", "assets/logo.webp",
     "package_plugin.py", "tests/test_server.py",
-    "ssh_clients.py", "enroll.py", "tests/test_clients_and_enroll.py",
+    "activity.py", "ssh_clients.py", "enroll.py", "tests/test_clients_and_enroll.py",
+    "RELEASE-REVIEW.md",
 )
 
 

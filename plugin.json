@@ -1,24 +1,27 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "ssh-workspace",
-  "version": "0.3.0",
-  "description": "Run SSH diagnostics from your computer using profiles stored in an encrypted local vault.",
+  "version": "0.3.1",
+  "description": "Run read-only SSH diagnostics from your Linux desktop using locally saved hosts.",
   "extensions": {
     "com.openai": {
       "interface": {
         "displayName": "SSH Workspace",
-        "shortDescription": "Local SSH diagnostics",
-        "longDescription": "Keep SSH host profiles in a local encrypted vault. List aliases by group and check connectivity, platform, or Linux uptime from your computer. Connect with a key, OpenSSH user certificate, or saved password. Override the source binding and negotiation settings for individual checks.",
+        "shortDescription": "Local SSH host diagnostics",
+        "longDescription": "Check whether saved SSH hosts are reachable, identify their OS and CPU architecture, and read Linux uptime. Connections run from your Linux desktop using a native OpenSSH client and strict host-key verification. Host profiles and saved passwords are encrypted on your machine. Use the local tools to manage profiles, select an OpenSSH version, and enroll public keys or user certificates. Chat exposes only saved host aliases and read-only diagnostic results.",
         "category": "Developer Tools",
-        "logo": "./assets/icon.svg",
-        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/logo.webp",
+        "composerIcon": "./assets/logo.webp",
         "defaultPrompt": [
-          "List the SSH hosts in my Lab group.",
-          "Check SSH connectivity to my saved Debian host."
-        ]
+          "List saved SSH hosts in my Lab group.",
+          "Check SSH connectivity to my saved Debian host.",
+          "What are the OS, CPU architecture, and uptime of my saved Debian host?"
+        ],
+        "brandColor": "#087A69",
+        "brandColorDark": "#10D5AD"
       },
       "publication": {
-        "release_notes": "Choose native OpenSSH clients, refresh a bounded channel cache, and enroll public keys or user certificate authorities."
+        "release_notes": "Adds directory branding, a desktop setup guide, and validated connection defaults in General Settings. Isolates the Python launcher and checks the system OpenSSH client."
       }
     }
   }

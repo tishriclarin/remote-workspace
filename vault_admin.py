@@ -10,6 +10,7 @@ from pathlib import Path
 from cryptography.fernet import Fernet
 from pydantic import ValidationError
 
+from ssh_clients import profile_defaults
 from vault import Host, Inventory, Vault, VaultError
 
 ALGORITHMS = ("ciphers", "kex_algorithms", "macs", "host_key_algorithms", "pubkey_algorithms")
@@ -32,7 +33,7 @@ def prompt_password():
 
 def put_profile(inventory, args, password):
     existing = inventory.hosts.get(args.alias)
-    profile = existing.model_dump(mode="python") if existing else {}
+    profile = existing.model_dump(mode="python") if existing else profile_defaults()
     for field in ("address", "hostname", "port", "account", "group", "comment", "auth",
                   "identity_file", "certificate_file", "known_hosts_file", "connect_timeout",
                   "protocol_compression", "bind_address", "bind_interface"):

@@ -51,7 +51,8 @@ class VaultTests(unittest.TestCase):
 
     def test_password_is_delivered_only_through_anonymous_pipe(self):
         profile = key_profile(identity_file=None, password="test-password", auth="password")
-        with patch("server.shutil.which", side_effect=lambda name: f"/test/bin/{name}"), \
+        with patch("server.selected_executable", return_value="/test/bin/ssh"), \
+             patch("server.shutil.which", return_value="/test/bin/sshpass"), \
              ssh_process_args(profile, "true") as (argv, descriptors):
             self.assertEqual(argv[:4], ["/test/bin/sshpass", "-d", str(descriptors[0]), "/test/bin/ssh"])
             self.assertNotIn("test-password", json.dumps(argv))
@@ -62,13 +63,13 @@ class VaultTests(unittest.TestCase):
             os.fstat(descriptors[0])
 
     def test_key_profile_reuses_ssh_from_path_without_sshpass(self):
-        with patch("server.shutil.which", return_value="/local/bin/ssh") as find:
+        with patch("server.selected_executable", return_value="/local/bin/ssh") as find:
             with ssh_process_args(key_profile(), "true") as (argv, descriptors):
                 self.assertEqual(argv[0], "/local/bin/ssh")
                 self.assertEqual(descriptors, ())
                 self.assertNotIn("ChannelTimeout=session=8s", argv)
-            find.assert_called_once_with("ssh")
-        with patch("server.shutil.which", return_value=None):
+            find.assert_called_once_with()
+        with patch("server.selected_executable", return_value=None):
             with self.assertRaisesRegex(SSHClientUnavailable, "cannot find ssh on PATH"), \
                  ssh_process_args(key_profile(), "true"):
                 self.fail("An SSH process cannot start without the system client")

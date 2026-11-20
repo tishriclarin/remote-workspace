@@ -8,10 +8,48 @@ from pathlib import Path
 from unittest.mock import patch
 
 import ssh_clients
+from activity import TAG, read_history
 from enroll import CA_INSTALL, ca_entry
 
 
 class ClientCacheTests(unittest.TestCase):
+    def test_history_filters_standard_journal_by_tag_and_local_user(self):
+        with patch("activity.shutil.which", return_value="/usr/bin/journalctl"), \
+             patch("activity.subprocess.run", return_value=subprocess.CompletedProcess(
+                 [], 0, "action=check_connection outcome=completed\n",
+             )) as run:
+            self.assertEqual(read_history(17), "action=check_connection outcome=completed")
+            self.assertEqual(run.call_args.args[0], [
+                "/usr/bin/journalctl", "--no-pager", "--quiet", "--identifier", TAG,
+                "--lines", "17", f"_UID={os.geteuid()}",
+            ])
+        with self.assertRaises(ValueError):
+            read_history(201)
+
+    def test_general_settings_accept_only_validated_profile_defaults(self):
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(ssh_clients, "config_directory", return_value=Path(directory)):
+            self.assertEqual(ssh_clients.profile_defaults(), {})
+            expected = {"connect_timeout": 8, "protocol_compression": False, "bind_address": "127.0.0.2"}
+            ssh_clients.save_profile_defaults(json.dumps(expected))
+            self.assertEqual(ssh_clients.profile_defaults(), expected)
+            for invalid in ({"strict_host_key_checking": False}, {"password": "test"},
+                            {"connect_timeout": 0}, {"connect_timeout": "8"},
+                            {"bind_address": "127.0.0.2", "bind_interface": "eth0"}):
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    ssh_clients.save_profile_defaults(json.dumps(invalid))
+            self.assertEqual(ssh_clients.profile_defaults(), expected)
+
+    def test_system_client_must_identify_as_openssh(self):
+        for selection in ("latest", "system"):
+            with self.subTest(selection=selection), \
+                 patch.object(ssh_clients, "read_state", return_value=json.dumps({
+                     "selection": selection, "cache": [],
+                 })), patch.object(ssh_clients.shutil, "which", return_value="/test/ssh"), \
+                 patch.object(ssh_clients, "inspect_client", side_effect=ValueError):
+                with self.assertRaisesRegex(ValueError, "could not be verified as OpenSSH"):
+                    ssh_clients.selected_executable()
+
     def test_refresh_retains_highest_version_of_four_majors_per_track(self):
         state = {"registered": [
             {"path": f"/test/{track}/{major}.1", "track": track}

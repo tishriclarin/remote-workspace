@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import signal
+import time
 from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Literal
@@ -15,6 +16,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, ValidationError
 
+from activity import log_activity
 from ssh_clients import selected_executable
 from vault import Alias, ConnectionOptions, Group, Host, Inventory, Vault
 
@@ -170,12 +172,21 @@ def build_server(load_inventory: Callable[[], Inventory]) -> FastMCP:
         except ValidationError:
             raise ToolError("That override is incompatible with the saved SSH profile.") from None
 
-    async def check(host: Host, command: str) -> bytes:
+    async def check(host: Host, command: str, action: str) -> bytes:
+        started = time.monotonic()
+        outcome = "failed"
         try:
             async with asyncio.timeout(host.connect_timeout + 10), slots:
-                return await run_ssh(host, command)
-        except (OSError, TimeoutError):
+                output = await run_ssh(host, command)
+                outcome = "completed"
+                return output
+        except TimeoutError:
+            outcome = "timed_out"
+            raise ToolError("The SSH check timed out.") from None
+        except OSError:
             raise ToolError("The SSH check failed.") from None
+        finally:
+            log_activity(action, outcome, round((time.monotonic() - started) * 1000))
 
     @mcp.tool(annotations=READ_ONLY)
     def list_ssh_hosts(group: Group | None = None) -> list[Alias]:
@@ -188,7 +199,7 @@ def build_server(load_inventory: Callable[[], Inventory]) -> FastMCP:
         """Check if SSH authentication succeeds on a saved host."""
         profile = saved_host(host, overrides)
         try:
-            await check(profile, "true")
+            await check(profile, "true", "check_connection")
         except SSHClientUnavailable:
             raise
         except ToolError:
@@ -198,7 +209,7 @@ def build_server(load_inventory: Callable[[], Inventory]) -> FastMCP:
     @mcp.tool(annotations=READ_ONLY)
     async def get_ssh_host_platform(host: Alias, overrides: ConnectionOptions | None = None) -> Platform:
         """Read the kernel family and CPU architecture of a saved SSH host."""
-        output = (await check(saved_host(host, overrides), "uname -sm")).split()
+        output = (await check(saved_host(host, overrides), "uname -sm", "get_platform")).split()
         if len(output) != 2 or not all(re.fullmatch(rb"[A-Za-z0-9_.-]{1,48}", value) for value in output):
             raise ToolError("The host returned an unsupported platform response.")
         return Platform(host=host, system=output[0].decode(), architecture=output[1].decode())
@@ -206,7 +217,7 @@ def build_server(load_inventory: Callable[[], Inventory]) -> FastMCP:
     @mcp.tool(annotations=READ_ONLY)
     async def get_ssh_host_uptime(host: Alias, overrides: ConnectionOptions | None = None) -> Uptime:
         """Read uptime in seconds from a saved Linux SSH host."""
-        output = (await check(saved_host(host, overrides), "cat /proc/uptime")).split()
+        output = (await check(saved_host(host, overrides), "cat /proc/uptime", "get_uptime")).split()
         if not output or not re.fullmatch(rb"[0-9]{1,12}(?:\.[0-9]{1,9})?", output[0]):
             raise ToolError("The host returned an unsupported uptime response.")
         return Uptime(host=host, uptime_seconds=math.floor(float(output[0])))

@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from activity import log_activity
 from server import SSHClientUnavailable, local_executable
 from vault import Vault
 
@@ -102,16 +103,21 @@ def main():
                 raise ValueError("Install ssh-copy-id from your native OpenSSH package")
             public_key(args.public_key)
             key_output(keygen, "-lf", args.public_key.resolve(strict=True))
-            return subprocess.run([
+            result = subprocess.run([
                 copy_id, *options, "-i", str(args.public_key.resolve(strict=True)),
                 f"{host.account}@{host.address}",
             ]).returncode
+            log_activity("enroll_key", "completed" if result == 0 else "failed")
+            return result
         entry = ca_entry(args.ca_public_key, args.certificate, args.principal, keygen)
-        return subprocess.run(
+        result = subprocess.run(
             [local_executable("ssh"), "-T", *options, "-l", host.account, "--", host.address, CA_INSTALL],
             input=entry + "\n", text=True,
         ).returncode
+        log_activity("enroll_certificate", "completed" if result == 0 else "failed")
+        return result
     except (OSError, ValueError, SSHClientUnavailable, subprocess.SubprocessError) as error:
+        log_activity(f"enroll_{args.action}", "failed")
         parser.exit(1, f"{error}\n")
 
 
