@@ -90,9 +90,9 @@ OpenSSH negotiates using its own defaults unless you supply an override. The ins
 
 ## Settings
 
-Run `python3 ssh_clients.py ui` from the unpacked plugin folder to open the local client selector. The GUI uses Tkinter (`python3-tk` on Debian and Ubuntu). The main screen only shows the OpenSSH client selector and the link to **General Settings**. In **General Settings**, **Refresh client cache** rechecks the registered executables and the system client. **Get native stable client** downloads the current `openssh-client` candidate from your configured Debian or Ubuntu APT repositories for the CPU architecture reported by `dpkg`. It uses APT verification and retains one managed `ssh` executable. It requires no root privileges and does not change system packages. Keep your APT package lists current. If the downloaded client needs system libraries that are missing, use the native package manager to install them.
+Run `python3 ssh_clients.py ui` from the unpacked plugin folder to open the local client selector. The GUI uses Tkinter (`python3-tk` on Debian and Ubuntu). The main screen only shows the OpenSSH client selector and the link to **General Settings**. In **General Settings**, **Refresh cache** rechecks the registered executables and the system client. **Get stable client** downloads the current `openssh-client` candidate from your configured Debian or Ubuntu APT repositories for the CPU architecture reported by `dpkg`. It uses APT verification and retains one managed `ssh` executable. It requires no root privileges and does not change system packages. Keep your APT package lists current. If the downloaded client needs system libraries that are missing, use the native package manager to install them.
 
-Development, stable, and old-stable are labels for registered local clients. For each label, refresh keeps the newest available entry for each of the newest four distinct major versions. No binaries are copied from another CPU architecture. Use package-manager installs or vendor-distributed native builds for additional versions and use **Add native client** to register them. Only register executables you trust. Selecting **System client on PATH** pins the system source. Selecting **Latest available stable** follows the highest stable version available locally.
+Development, stable, and old-stable are labels for registered local clients. For each label, refresh keeps the newest available entry for each of the newest four distinct major versions. No binaries are copied from another CPU architecture. Use package-manager installs or vendor-distributed native builds for additional versions. Choose **Add client…**, enter or browse to the executable, select its release track, and choose **Add client**. Only register executables you trust. Selecting **System client on PATH** pins the system source. Selecting **Latest available stable** follows the highest stable version available locally.
 
 ```bash
 python3 ssh_clients.py fetch-native
@@ -101,6 +101,10 @@ python3 ssh_clients.py refresh
 python3 ssh_clients.py list
 python3 ssh_clients.py select latest
 ```
+
+### Appearance
+
+Choose **Follow system**, **Light**, or **Dark** in General Settings. Follow system reads the Linux desktop appearance through the XDG Settings portal when available. The separate native settings window does not receive ChatGPT’s app-specific theme setting. If ChatGPT uses a different theme from Linux, choose the matching theme here.
 
 ### General Settings textbox
 
@@ -146,7 +150,7 @@ Certificate enrollment checks the certificate type, CA fingerprint, and named pr
 
 ## Verify and package
 
-Run `python3 -m unittest discover -s tests -v` from the source directory. Build the portable source ZIP with `python3 package_plugin.py --output ssh-workspace-0.3.1.zip`. For an offline build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Both packaging modes use the installed OpenSSH client. OpenSSH and sshpass are supplied by the local OS or registered native installs.
+Run `python3 -m unittest discover -s tests -v` from the source directory. Build the portable source ZIP with `python3 package_plugin.py --output ssh-workspace-0.3.2.zip`. For an offline build, install the Python dependencies into a staging directory with `pip install --target /path/to/staging -r requirements.txt` for the intended Linux architecture and Python version. Build with `--vendor /path/to/staging --publisher 'Verified Publisher Name'`. Both packaging modes use the installed OpenSSH client. OpenSSH and sshpass are supplied by the local OS or registered native installs.
 
 Public directory submission for this execution model is [desktop-only](https://developers.openai.com/plugins/deploy/desktop-only). OpenAI requires the submitting organization to be approved for local MCP submissions.
 

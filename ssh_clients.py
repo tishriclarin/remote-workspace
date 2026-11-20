@@ -8,7 +8,6 @@ import re
 import shutil
 import subprocess
 import tempfile
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from activity import log_activity, read_history
@@ -219,102 +218,6 @@ def refresh_cache():
     return state
 
 
-def show_ui():
-    import tkinter as tk
-    from tkinter import filedialog, messagebox, ttk
-
-    root = tk.Tk()
-    root.title("SSH Workspace Settings")
-    panel = ttk.Frame(root, padding=16)
-    panel.pack(fill="both", expand=True)
-    choice = tk.StringVar()
-    track = tk.StringVar(value="stable")
-    status = tk.StringVar()
-    labels = {}
-    executor = ThreadPoolExecutor(max_workers=1)
-    ttk.Label(panel, text="OpenSSH client").pack(anchor="w")
-    menu = ttk.Combobox(panel, textvariable=choice, state="readonly", width=56)
-    menu.pack(fill="x", pady=(4, 8))
-    general = ttk.Frame(panel)
-    ttk.Label(general, text="Defaults for new host profiles (JSON)").pack(anchor="w")
-    editor = tk.Text(general, width=56, height=7, wrap="none")
-    editor.pack(fill="x", pady=(4, 8))
-
-    def render(state):
-        labels.clear()
-        labels.update({"Latest available stable": "latest", "System client on PATH": "system"})
-        for client in state["cache"]:
-            labels[f'{client["version"]} · {client["track"]} · {client["path"]}'] = client["id"]
-        menu.configure(values=list(labels))
-        choice.set(next((label for label, value in labels.items()
-                         if value == state["selection"]), ""))
-        status.set(f'{len(state["cache"])} native clients in cache')
-
-    def run(action):
-        try:
-            render(action())
-        except (OSError, ValueError, subprocess.SubprocessError) as error:
-            messagebox.showerror("SSH Workspace", str(error), parent=root)
-
-    def open_general():
-        if general.winfo_manager():
-            general.pack_forget()
-            return
-        editor.delete("1.0", "end")
-        editor.insert("1.0", json.dumps(json.loads(read_state()).get("profile_defaults", {}), indent=2))
-        general.pack(fill="x", pady=(8, 0))
-
-    def show_history():
-        try:
-            events = read_history()
-        except (OSError, ValueError, subprocess.SubprocessError) as error:
-            messagebox.showerror("SSH Workspace History", str(error), parent=root)
-            return
-        window = tk.Toplevel(root)
-        window.title("SSH Workspace History")
-        history = tk.Text(window, width=88, height=18, wrap="word")
-        history.pack(fill="both", expand=True, padx=12, pady=12)
-        history.insert("1.0", events)
-        history.configure(state="disabled")
-
-    def add_client():
-        path = filedialog.askopenfilename(title="Select an installed OpenSSH executable", parent=root)
-        if path:
-            run(lambda: register(path, track.get()))
-
-    def download():
-        download_button.configure(state="disabled")
-        status.set("Fetching the native client from APT…")
-        job = executor.submit(fetch_native)
-
-        def finish():
-            if not job.done():
-                root.after(100, finish)
-                return
-            run(job.result)
-            download_button.configure(state="normal")
-
-        root.after(100, finish)
-
-    menu.bind("<<ComboboxSelected>>", lambda _: run(lambda: select(labels[choice.get()])))
-    ttk.Button(panel, text="General Settings", command=open_general).pack(anchor="w")
-    ttk.Button(general, text="Save defaults", command=lambda: run(
-        lambda: save_profile_defaults(editor.get("1.0", "end"))
-    )).pack(anchor="w", pady=(0, 8))
-    ttk.Button(general, text="Refresh client cache", command=lambda: run(refresh_cache)).pack(anchor="w")
-    buttons = ttk.Frame(general)
-    buttons.pack(anchor="w", pady=8)
-    ttk.Combobox(buttons, textvariable=track, state="readonly", values=TRACKS, width=14).pack(side="left")
-    ttk.Button(buttons, text="Add native client", command=add_client).pack(side="left", padx=8)
-    download_button = ttk.Button(general, text="Get native stable client", command=download)
-    download_button.pack(anchor="w")
-    ttk.Button(general, text="View activity history", command=show_history).pack(anchor="w", pady=(8, 0))
-    ttk.Label(general, textvariable=status).pack(anchor="w")
-    render(json.loads(read_state()))
-    root.mainloop()
-    executor.shutdown(wait=False)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="action", required=True)
@@ -334,6 +237,8 @@ def main():
     args = parser.parse_args()
     try:
         if args.action == "ui":
+            from settings_ui import show_ui
+
             show_ui()
             return
         if args.action == "history":

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "ssh-workspace",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Run read-only SSH diagnostics from your Linux desktop using locally saved hosts.",
   "extensions": {
     "com.openai": {
@@ -21,7 +21,7 @@
         "brandColorDark": "#10D5AD"
       },
       "publication": {
-        "release_notes": "Adds directory branding, a desktop setup guide, and validated connection defaults in General Settings. Isolates the Python launcher and checks the system OpenSSH client."
+        "release_notes": "Redesigns native settings and history with system, light, and dark appearance options. Adds a native-client dialog and keeps cache operations off the UI thread."
       }
     }
   }
