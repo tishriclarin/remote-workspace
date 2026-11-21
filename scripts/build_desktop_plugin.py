@@ -120,7 +120,7 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         skill_path.parent.mkdir(parents=True)
         skill_path.write_text(
             "---\nname: ssh-workspace\ndescription: Local-first authorized SSH diagnostics.\n---\n\n"
-            "# SSH Workspace\nUse only saved host aliases. Never ask for credentials in chat.\n"
+            "# SSH Workspace\nLoad remote-safety and remote-workspace skills before any remote action.\nUse only saved host aliases. Never ask for credentials in chat.\n"
             "Only fixed read-only diagnostics are available. Do not claim arbitrary shell access.\n"
             "Never disable strict SSH host-key checks.\n", encoding="utf-8")
         for legal in ("LICENSE", "NOTICE"):
