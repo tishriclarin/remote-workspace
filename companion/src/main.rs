@@ -426,6 +426,65 @@ fn tunnel_action(args: &[String]) -> AppResult<()> {
     Ok(())
 }
 
+
+fn user_install_directory() -> PathBuf {
+    if let Some(root) = env::var_os("SSHWORKSPACE_INSTALL_ROOT") {
+        return PathBuf::from(root);
+    }
+    if cfg!(windows) {
+        env::var_os("LOCALAPPDATA").map(PathBuf::from)
+            .unwrap_or_else(home).join("SSHWorkspace/bin")
+    } else if cfg!(target_os = "macos") {
+        home().join("Library/Application Support/SSHWorkspace/bin")
+    } else {
+        env::var_os("XDG_DATA_HOME").map(PathBuf::from)
+            .unwrap_or_else(|| home().join(".local/share")).join("ssh-workspace/bin")
+    }
+}
+fn install_for_user() -> AppResult<()> {
+    use std::process;
+    let source = env::current_exe().map_err(|e| e.to_string())?;
+    let target_dir = user_install_directory();
+    ensure_dir(&target_dir)?;
+    let name = if cfg!(windows) { "sshworkspace.exe" } else { "sshworkspace" };
+    let target = target_dir.join(name);
+    if source == target {
+        println!("SSH Workspace is already installed at {}", target.display());
+        return Ok(());
+    }
+    if target.is_symlink() {
+        return Err("Refusing to replace a symlinked executable".into());
+    }
+    // Copy into a new file in the same directory; never write into a privileged OS path.
+    let temporary = target_dir.join(format!(".sshworkspace-install-{}.tmp", process::id()));
+    let result = (|| -> AppResult<()> {
+        let mut existing = File::open(&source).map_err(|e| e.to_string())?;
+        let mut opts = OpenOptions::new();
+        opts.write(true).create_new(true);
+        #[cfg(unix)] {
+            use std::os::unix::fs::OpenOptionsExt;
+            opts.mode(0o700);
+        }
+        let mut next = opts.open(&temporary).map_err(|e| e.to_string())?;
+        io::copy(&mut existing, &mut next).map_err(|e| e.to_string())?;
+        next.sync_all().map_err(|e| e.to_string())?;
+        #[cfg(unix)] {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&temporary, fs::Permissions::from_mode(0o700))
+                .map_err(|e| e.to_string())?;
+        }
+        fs::rename(&temporary, &target).map_err(|e| format!(
+            "Cannot replace executable (close a running copy first): {e}"
+        ))?;
+        Ok(())
+    })();
+    if result.is_err() { let _ = fs::remove_file(&temporary); }
+    result?;
+    println!("Installed SSH Workspace v{VERSION} for this OS user at {}", target.display());
+    println!("No administrator privileges or other software installations were requested.");
+    Ok(())
+}
+
 fn init() -> AppResult<()> {
     let dir = data_dir();
     ensure_dir(&dir)?;
@@ -450,6 +509,7 @@ fn run() -> AppResult<()> {
             println!("Saved SSH host profiles: {}", read_hosts()?.len());
             Ok(())
         },
+        Some("install") if args.len() == 3 && args[2] == "--user" => install_for_user(),
         Some("install") => {
             println!("{}", serde_json::to_string_pretty(&installation_guidance()).map_err(|e|e.to_string())?);
             Ok(())
@@ -500,6 +560,7 @@ fn run() -> AppResult<()> {
             println!("  register-chrome EXTENSION_ID  Restrict native-host status to this extension");
             println!("  tunnel init ID | doctor | run  Official OpenAI Secure MCP Tunnel integration");
             println!("  install        Print platform-specific setup guidance");
+            println!("  install --user Copy the approved native binary to a private user-owned directory");
             Ok(())
         }
     }
@@ -530,6 +591,14 @@ mod tests {
     fn no_arbitrary_command_tool() {
         assert!(tools().iter().all(|t|t["name"] != "execute_command"));
         assert!(tool_call(&json!({"name":"run_shell","arguments":{"command":"whoami"}})).is_err());
+    }
+    #[test]
+    fn native_install_path_is_user_scoped() {
+        let path = user_install_directory();
+        assert!(!path.as_os_str().is_empty());
+        assert!(path.to_string_lossy().contains("ssh-workspace")
+            || path.to_string_lossy().contains("SSHWorkspace")
+            || env::var_os("SSHWORKSPACE_INSTALL_ROOT").is_some());
     }
     #[test]
     fn tunnel_id_input_is_bounded() {
