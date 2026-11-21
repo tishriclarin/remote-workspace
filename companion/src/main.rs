@@ -1,5 +1,6 @@
 //! Local-first SSH Workspace companion. No arbitrary command execution tools.
 //! Credentials stay on the user's device. SSH uses an embedded libssh2 engine.
+mod secure_vault;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use ssh2::{CheckResult, KnownHostFileKind, Session};
@@ -17,6 +18,16 @@ const MAX_OUTPUT: u64 = 4096;
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum GatewayMode { Client, Central }
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum BackupMode { Local, CloudSync }
+impl Default for BackupMode { fn default() -> Self { Self::Local } }
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(default)]
+struct BackupSettings {
+    mode: BackupMode,
+    directory: Option<String>,
+}
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(default)]
 struct Settings {
@@ -24,11 +35,13 @@ struct Settings {
     central_mcp_url: Option<String>,
     read_only: bool,
     require_approval_for_changes: bool,
+    backup: BackupSettings,
 }
 impl Default for Settings {
     fn default() -> Self {
         Self { gateway_mode: GatewayMode::Client, central_mcp_url: None,
-               read_only: true, require_approval_for_changes: true }
+               read_only: true, require_approval_for_changes: true,
+               backup: BackupSettings::default() }
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +56,12 @@ struct Host {
     identity_file: Option<String>,
     #[serde(default)]
     known_hosts_file: Option<String>,
+    #[serde(default)]
+    certificate_file: Option<String>,
+    #[serde(default)]
+    vendor: Option<String>,
+    #[serde(default)]
+    protocol: Option<String>,
 }
 fn default_port() -> u16 { 22 }
 
@@ -97,12 +116,18 @@ fn read_settings() -> AppResult<Settings> {
         .map_err(|e| format!("Invalid settings: {e}"))
 }
 fn read_hosts() -> AppResult<Vec<Host>> {
-    let path = data_dir().join("hosts.json");
-    if !path.exists() { return Ok(vec![]); }
-    let hosts: Vec<Host> = serde_json::from_reader(File::open(path).map_err(|e| e.to_string())?)
-        .map_err(|e| format!("Invalid host configuration: {e}"))?;
-    for h in &hosts { validate_host(h)?; }
+    let plaintext = match secure_vault::read(&data_dir())? {
+        Some(bytes) => bytes,
+        None => return Ok(vec![]),
+    };
+    let hosts: Vec<Host> = serde_json::from_slice(&plaintext)
+        .map_err(|e| format!("Invalid encrypted host configuration: {e}"))?;
+    for host in &hosts { validate_host(host)?; }
     Ok(hosts)
+}
+fn save_hosts(hosts: &[Host]) -> AppResult<()> {
+    let plaintext = serde_json::to_vec_pretty(hosts).map_err(|e| e.to_string())?;
+    secure_vault::write(&data_dir(), &plaintext)
 }
 fn valid_alias(alias: &str) -> bool {
     !alias.is_empty() && alias.len() <= 64 && alias.bytes()
@@ -115,6 +140,14 @@ fn validate_host(h: &Host) -> AppResult<()> {
     }
     if h.address.contains(char::is_whitespace) || h.username.contains(char::is_whitespace) {
         return Err("Host address and username must not contain whitespace".into());
+    }
+    if h.protocol.as_deref().is_some_and(|protocol| protocol != "ssh") {
+        return Err("The native companion only supports SSH; Telnet is disabled".into());
+    }
+    if let Some(vendor) = &h.vendor {
+        if !["linux","mikrotik","cisco","juniper","huawei","zte","other"].contains(&vendor.as_str()) {
+            return Err("Unsupported vendor label".into());
+        }
     }
     Ok(())
 }
@@ -205,6 +238,9 @@ fn gateway_status() -> AppResult<Value> {
         "architecture": env::consts::ARCH,
         "config_directory": data_dir().display().to_string(),
         "transport": "local_stdio",
+        "inventory_encrypted": secure_vault::status(&data_dir())["encrypted_inventory_present"],
+        "backup_mode": s.backup.mode,
+        "backup_configured": s.backup.directory.is_some(),
         "connection_route": "host_managed_local_mcp",
         "requires_additional_openai_api_key": false,
         "requires_tunnel_for_local_host_execution": false,
@@ -233,6 +269,7 @@ fn tools() -> Vec<Value> {
     vec![
         json!({"name":"get_gateway_status","description":"Read local-first gateway settings and connectivity status.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"annotations":{"readOnlyHint":true}}),
         json!({"name":"get_installation_options","description":"Show approved native-companion installation paths.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"annotations":{"readOnlyHint":true}}),
+        json!({"name":"get_vault_status","description":"Read encryption and configured backup status without exposing secrets.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"annotations":{"readOnlyHint":true}}),
         json!({"name":"list_ssh_hosts","description":"List saved host aliases only; no credentials returned.","inputSchema":{"type":"object","properties":{},"additionalProperties":false},"annotations":{"readOnlyHint":true}}),
         json!({"name":"check_ssh_connection","description":"Authenticate to a pinned SSH host without executing a command.","inputSchema":alias_schema,"annotations":{"readOnlyHint":true}}),
         json!({"name":"get_ssh_host_platform","description":"Read OS and CPU architecture from a pinned SSH host.","inputSchema":{"type":"object","properties":{"alias":{"type":"string"}},"required":["alias"],"additionalProperties":false},"annotations":{"readOnlyHint":true}}),
@@ -250,6 +287,11 @@ fn tool_call(params: &Value) -> AppResult<Value> {
     match name {
         "get_gateway_status" => gateway_status(),
         "get_installation_options" => Ok(installation_guidance()),
+        "get_vault_status" => Ok(json!({
+            "vault": secure_vault::status(&data_dir()),
+            "backup_mode": read_settings()?.backup.mode,
+            "backup_configured": read_settings()?.backup.directory.is_some()
+        })),
         "list_ssh_hosts" => Ok(json!({"aliases": read_hosts()?.iter().map(|h| &h.alias).collect::<Vec<_>>()})),
         "check_ssh_connection" => {
             let h = get_host(alias()?)?;
@@ -492,11 +534,87 @@ fn install_for_user() -> AppResult<()> {
     Ok(())
 }
 
+
+fn vault_command(args: &[String]) -> AppResult<()> {
+    match args.get(2).map(String::as_str) {
+        Some("status") if args.len() == 3 => {
+            println!("{}", serde_json::to_string_pretty(&secure_vault::status(&data_dir()))
+                .map_err(|e|e.to_string())?);
+            Ok(())
+        },
+        Some("migrate") if args.len() == 3 => {
+            let old = data_dir().join("hosts.json");
+            let data = fs::read(&old).map_err(|_| "No legacy hosts.json available")?;
+            let hosts: Vec<Host> = serde_json::from_slice(&data)
+                .map_err(|_| "Legacy host profiles are invalid")?;
+            for host in &hosts { validate_host(host)?; }
+            secure_vault::migrate_legacy(&data_dir())?;
+            println!("Migrated {} profiles into authenticated encrypted vault.", hosts.len());
+            println!("Review and remove old hosts.json (still plaintext) when satisfied.");
+            Ok(())
+        },
+        _ => Err("Usage: sshworkspace vault status | migrate".into())
+    }
+}
+fn backup_command(args: &[String]) -> AppResult<()> {
+    match args.get(2).map(String::as_str) {
+        Some("status") if args.len() == 3 => {
+            let s = read_settings()?;
+            println!("{}", serde_json::to_string_pretty(&json!({
+                "mode": s.backup.mode, "destination_configured": s.backup.directory.is_some(),
+                "destination": s.backup.directory,
+                "encrypted": true, "includes_key": false
+            })).map_err(|e|e.to_string())?);
+            Ok(())
+        },
+        Some("configure") if args.len() == 5 => {
+            let mode = match args[3].as_str() {
+                "local" => BackupMode::Local,
+                "cloud-sync" => BackupMode::CloudSync,
+                _ => return Err("Mode must be local or cloud-sync".into())
+            };
+            if args[4].trim().is_empty() { return Err("Backup directory must not be empty".into()); }
+            let directory = expand_home(&args[4]);
+            if directory == data_dir() {
+                return Err("Use a separate backup directory, not the local vault directory".into());
+            }
+            ensure_dir(&directory)?;
+            let mut s = read_settings()?;
+            s.backup.mode = mode;
+            s.backup.directory = Some(directory.to_string_lossy().to_string());
+            save("settings.json", &s)?;
+            println!("Encrypted backup destination configured at {}", directory.display());
+            if mode == BackupMode::CloudSync {
+                println!("Ensure a trusted cloud synchronization client syncs this folder. No cloud upload API is built in.");
+            }
+            Ok(())
+        },
+        Some("run") if args.len() == 4 => {
+            let s = read_settings()?;
+            let folder = s.backup.directory.ok_or(
+                "Configure a backup destination first: sshworkspace backup configure local|cloud-sync DIR")?;
+            let mode = match s.backup.mode {
+                BackupMode::Local => "local", BackupMode::CloudSync => "cloud-sync"
+            };
+            let receipt = secure_vault::backup(&data_dir(), &PathBuf::from(folder), &args[3], mode)?;
+            println!("{}", serde_json::to_string_pretty(&receipt).map_err(|e|e.to_string())?);
+            Ok(())
+        },
+        Some("restore") if args.len() == 5 && args[4] == "--confirm" => {
+            secure_vault::restore(&data_dir(), &expand_home(&args[3]))?;
+            for host in read_hosts()? { validate_host(&host)?; }
+            println!("Encrypted backup restored after explicit confirmation. Previous ciphertext retained for local recovery.");
+            Ok(())
+        },
+        _ => Err("Usage: sshworkspace backup status | configure local|cloud-sync DIR | run DESCRIPTION | restore FILE --confirm".into())
+    }
+}
+
 fn init() -> AppResult<()> {
     let dir = data_dir();
     ensure_dir(&dir)?;
     if !dir.join("settings.json").exists() { save("settings.json",&Settings::default())?; }
-    if !dir.join("hosts.json").exists() { save("hosts.json",&Vec::<Host>::new())?; }
+    secure_vault::initialize(&dir)?;
     println!("SSH Workspace local-first configuration initialized at {}",dir.display());
     println!("Pin SSH server host keys in ~/.ssh/known_hosts before connecting.");
     println!("Register this binary as a local stdio MCP server with: sshworkspace mcp");
@@ -511,6 +629,8 @@ fn run() -> AppResult<()> {
         Some("register-chrome") => register_chromium_host(args.get(2).ok_or("Missing extension ID")?),
         Some("tunnel") => tunnel_action(&args),
         Some("setup") => init(),
+        Some("vault") => vault_command(&args),
+        Some("backup") => backup_command(&args),
         Some("doctor") | Some("status") => {
             println!("{}",serde_json::to_string_pretty(&gateway_status()?).map_err(|e| e.to_string())?);
             println!("Saved SSH host profiles: {}", read_hosts()?.len());
@@ -546,13 +666,14 @@ fn run() -> AppResult<()> {
             let host = Host {
                 alias: args[3].clone(), address: args[4].clone(), username: args[5].clone(),
                 port: if let Some(p) = args.get(6) { p.parse().map_err(|_| "Invalid SSH port")? } else {22},
-                identity_file: args.get(7).cloned(), known_hosts_file: None
+                identity_file: args.get(7).cloned(), known_hosts_file: None,
+                certificate_file: None, vendor: None, protocol: None
             };
             validate_host(&host)?;
             let mut hosts = read_hosts()?;
             if hosts.iter().any(|h| h.alias == host.alias) { return Err("Alias already exists".into()); }
             hosts.push(host);
-            save("hosts.json",&hosts)?;
+            save_hosts(&hosts)?;
             println!("Host alias saved. SSH connection requires independently verified pinned host key.");
             Ok(())
         },
@@ -562,6 +683,9 @@ fn run() -> AppResult<()> {
             println!("  doctor         Check local settings and host count");
             println!("  gateway client | central HTTPS_URL");
             println!("  host add ALIAS ADDRESS USERNAME [PORT] [IDENTITY_FILE]");
+            println!("  vault status | migrate  Encrypted device host inventory");
+            println!("  backup status | configure local|cloud-sync DIR | run DESCRIPTION");
+            println!("  backup restore FILE --confirm");
             println!("  mcp            Run local stdio MCP server");
             println!("  native-messaging  Browser extension status host (no SSH command API)");
             println!("  register-chrome EXTENSION_ID  Restrict native-host status to this extension");
@@ -593,6 +717,12 @@ mod tests {
     fn aliases_are_bounded_and_safe() {
         assert!(valid_alias("branch-router_1"));
         for alias in ["", "../etc/passwd", "bad alias", "a/b", "x\n"] { assert!(!valid_alias(alias)); }
+    }
+    #[test]
+    fn backup_defaults_local_without_destination() {
+        let default = Settings::default();
+        assert_eq!(default.backup.mode, BackupMode::Local);
+        assert!(default.backup.directory.is_none());
     }
     #[test]
     fn no_arbitrary_command_tool() {
