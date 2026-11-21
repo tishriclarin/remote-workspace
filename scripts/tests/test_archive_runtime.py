@@ -30,19 +30,18 @@ class ArchiveRuntimeTest(unittest.TestCase):
                 folder = Path(work)
                 archive.extractall(folder)
                 command = mcp["mcpServers"]["remote-workspace"]
-                prefix = "$" + "{PLUGIN_ROOT}"
-                self.assertTrue(command["command"].startswith(prefix + "/bin/"))
-                relative = command["command"][len(prefix) + 1:]
-                exe = folder / relative
+                name = "remoteworkspace.exe" if os.name == "nt" else "remoteworkspace"
+                self.assertEqual(command["command"], f"./bin/{name}")
+                self.assertEqual(command["cwd"], "./")
+                self.assertEqual(command["args"], ["mcp"])
+                exe = folder / command["command"]
                 self.assertTrue(exe.is_file())
                 if os.name != "nt":
-                    exe.chmod(exe.stat().st_mode | 0o700)
-                self.assertTrue(str(exe).endswith(".exe") if os.name == "nt"
-                                else exe.name == "remoteworkspace")
-                self.assertEqual(command["args"], ["mcp"])
+                    mode = archive.getinfo(f"bin/{name}").external_attr >> 16 & 0o777
+                    self.assertTrue(mode & 0o100)
+                    exe.chmod(mode)
                 env = dict(os.environ)
                 env["REMOTEWORKSPACE_HOME"] = str(folder / "private-config")
-                self.assertEqual(command["cwd"], prefix)
                 requests = [
                     {"id": 1, "method": "initialize", "params": {
                         "protocolVersion": "2025-03-26",

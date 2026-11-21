@@ -52,7 +52,8 @@ class PackagingTests(unittest.TestCase):
             info = json.loads(zipf.read("BUILD-INFO.json"))
             self.assertEqual(manifest["version"], "0.7.0")
             self.assertEqual(conf["mcpServers"]["remote-workspace"]["command"],
-                             "$" + "{PLUGIN_ROOT}/bin/remoteworkspace")
+                             "./bin/remoteworkspace")
+            self.assertEqual(conf["mcpServers"]["remote-workspace"]["cwd"], "./")
             self.assertTrue(manifest["requires_local_executor"])
             self.assertEqual(manifest["mcpServers"], "./.mcp.json")
             self.assertEqual(conf["mcpServers"]["remote-workspace"]["args"], ["mcp"])

@@ -55,14 +55,13 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         shutil.copy2(binary, executable)
         if name != "remoteworkspace.exe":
             executable.chmod(0o755)
-        root_placeholder = "$" + "{PLUGIN_ROOT}"
         mcp_entry = {
             "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
             "mcpServers": {
                 "remote-workspace": {
                     "type": "stdio",
-                    "command": root_placeholder + "/bin/" + name,
-                    "args": ["mcp"], "cwd": root_placeholder
+                    "command": "./bin/" + name,
+                    "args": ["mcp"], "cwd": "./"
                 }
             }
         }
