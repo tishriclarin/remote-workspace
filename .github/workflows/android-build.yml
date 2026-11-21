@@ -27,12 +27,12 @@ jobs:
           cargo install cargo-ndk --locked
       - name: Test native Rust code on Linux host
         working-directory: companion
-        run: cargo test --locked
+        run: cargo test
       - name: Cross-compile Android ARM64
         working-directory: companion
         env:
           OPENSSL_STATIC: '1'
-        run: cargo ndk -t arm64-v8a -p 28 build --release --locked
+        run: cargo ndk -t arm64-v8a -p 28 build --release
       - name: Verify Android ELF target and dynamic linker
         shell: bash
         run: |
