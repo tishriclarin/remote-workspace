@@ -11,7 +11,7 @@ use zeroize::Zeroizing;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
@@ -284,7 +284,7 @@ pub fn recovery_export(root: &Path, destination: &Path, passphrase: &str) -> Res
     };
     let wrapping_key = recovery_derived_key(passphrase, &salt)?;
     let local_key = Zeroizing::new(load_key(root)?);
-    let cipher = XChaCha20Poly1305::new(Key::from_slice(&wrapping_key));
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&wrapping_key[..]));
     let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
     let ciphertext = cipher.encrypt(&nonce, &local_key[..])
         .map_err(|_| "Recovery encryption failed")?;
@@ -326,7 +326,7 @@ fn open_recovery_key(file: &Path, passphrase: &str) -> Result<Zeroizing<[u8; KEY
     let salt: [u8; RECOVERY_SALT_LEN] = raw[prefix..prefix+RECOVERY_SALT_LEN]
         .try_into().map_err(|_| "Invalid recovery salt")?;
     let derived = recovery_derived_key(passphrase, &salt)?;
-    let cipher = XChaCha20Poly1305::new(Key::from_slice(&derived));
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&derived[..]));
     let start = prefix + RECOVERY_SALT_LEN;
     let nonce = XNonce::from_slice(&raw[start..start+NONCE_LEN]);
     let decrypted = cipher.decrypt(nonce, &raw[start+NONCE_LEN..])
