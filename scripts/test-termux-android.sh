@@ -8,6 +8,13 @@ if [[ "$(uname -m)" != "aarch64" && "$(uname -m)" != "arm64" ]]; then
   exit 2
 fi
 
+# An ARM64 Linux host is not necessarily Android. Require Android's system
+# property service before invoking any supplied executable.
+if ! command -v getprop >/dev/null 2>&1 || ! [[ "$(getprop ro.build.version.sdk 2>/dev/null)" =~ ^[0-9]+$ ]]; then
+  echo 'ERROR: Android system property service required' >&2
+  exit 2
+fi
+
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 /path/to/cloud-built/remoteworkspace" >&2
   exit 2
