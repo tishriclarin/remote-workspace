@@ -4,14 +4,14 @@
 <title>SSH Workspace — Companion Setup</title>
 <style>
 :root{color-scheme:dark;background:#0e1b27;color:#f4f9fb;font-family:system-ui,sans-serif}
-body{max-width:720px;margin:40px auto;padding:0 20px}
+body{max-width:920px;margin:40px auto;padding:0 20px}
 h1{font-size:28px}h2{font-size:20px;margin-top:28px}p{line-height:1.6;color:#c8d6df}
 .panel{background:#192b3a;border:1px solid #345064;border-radius:12px;padding:22px}
 button{background:#19d2ae;color:#072824;border:0;border-radius:8px;padding:14px 19px;font-weight:700;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
 code{background:#0a131c;padding:3px 5px;border-radius:4px}
 a{color:#79d8fb}
-small{color:#adbfca}
+small{color:#adbfca} textarea{width:100%;min-height:300px;box-sizing:border-box;background:#0a131c;color:#f4f9fb;border:1px solid #345064;border-radius:8px;padding:14px;font:13px/1.5 ui-monospace,monospace} select{background:#0a131c;color:#fff;padding:10px;border:1px solid #345064;border-radius:6px} .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px} .toolbar button{padding:10px 14px} #doc-status{min-height:24px}
 </style></head>
 <body>
 <h1>SSH Workspace</h1>
@@ -23,10 +23,32 @@ small{color:#adbfca}
   <button id="install" disabled>Find companion installer</button>
   <p><small id="explanation"></small></p>
 </div>
+<section class="panel" id="documentation">
+<h2>Documentation &amp; rules</h2>
+<p>View the source-controlled documentation, edit a working copy, then export it or propose changes to GitHub. Editing here does not silently change the device policy or the repository.</p>
+<div class="toolbar">
+<label for="doc-file">File</label>
+<select id="doc-file">
+<option value="README.md">Project README</option>
+<option value="AGENTS.md">Agent rules</option>
+<option value="docs/DEVICE_POLICY.md">Device safety policy</option>
+<option value="skills/remote-safety/SKILL.md">Remote safety skill</option>
+<option value="skills/remote-workspace/SKILL.md">Remote workspace skill</option>
+<option value="skills/ssh-client/SKILL.md">SSH protocol skill</option>
+<option value="gateway/README.md">Gateway documentation</option>
+</select>
+<button id="doc-reload" type="button">Reload</button>
+<button id="doc-download" type="button" disabled>Save edited copy</button>
+<button id="doc-propose" type="button" disabled>Propose on GitHub</button>
+</div>
+<p id="doc-status" role="status">Select a document to load.</p>
+<textarea id="doc-editor" spellcheck="false" aria-label="Documentation file editor"></textarea>
+</section>
 <h2>After installation</h2>
 <p>Run <code>sshworkspace setup</code> once, then register the binary as a local stdio MCP server where that connection type is supported. To switch gateway modes, use <code>sshworkspace gateway client</code> or <code>sshworkspace gateway central HTTPS_URL</code>.</p>
 <h2>Security requirements</h2>
 <p>OS and browser authorization is mandatory. This page never executes downloads or remote commands silently. Only verified, publisher-signed installers should be offered as production one-click packages; development artifacts are unsigned.</p>
 <p><a href="https://github.com/tishriclarin/ssh-workspace">Project repository</a></p>
 <script src="setup.js"></script>
+<script src="docs.js"></script>
 </body></html>
