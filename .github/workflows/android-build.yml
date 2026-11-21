@@ -38,12 +38,15 @@ jobs:
         run: |
           set -euo pipefail
           BIN=companion/target/aarch64-linux-android/release/remoteworkspace
+          test -s "$BIN"
           file "$BIN"
+          readelf -h "$BIN" | grep -Eq 'Class:.*ELF64'
           readelf -h "$BIN" | grep -Eq 'Machine:.*AArch64'
+          # Dynamic Android executables must request Android's linker, not glibc's.
           if readelf -l "$BIN" | grep -q 'Requesting program interpreter'; then
             readelf -l "$BIN" | grep -F '/system/bin/linker64'
           fi
-          if readelf -d "$BIN" | grep -Eq 'NEEDED.*(libc\\.so\\.6|libpthread\\.so\\.0|libdl\\.so\\.2)'; then
+          if readelf -d "$BIN" | grep -Eq 'NEEDED.*(libc\.so\.6|libpthread\.so\.0|libdl\.so\.2)'; then
             echo 'ERROR: Linux glibc dependency detected in Android executable' >&2
             exit 1
           fi
