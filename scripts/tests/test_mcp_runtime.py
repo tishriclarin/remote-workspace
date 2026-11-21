@@ -7,15 +7,15 @@ import subprocess
 import tempfile
 import unittest
 
-BINARY = os.getenv("SSHWORKSPACE_BIN")
+BINARY = os.getenv("REMOTEWORKSPACE_BIN")
 
-@unittest.skipUnless(BINARY and Path(BINARY).is_file(), "Requires SSHWORKSPACE_BIN")
+@unittest.skipUnless(BINARY and Path(BINARY).is_file(), "Requires REMOTEWORKSPACE_BIN")
 class MCPRuntimeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.env = dict(os.environ)
-        self.env["SSHWORKSPACE_HOME"] = self.temp.name
+        self.env["REMOTEWORKSPACE_HOME"] = self.temp.name
         result = subprocess.run([BINARY, "setup"], env=self.env, capture_output=True,
                                 text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -78,13 +78,13 @@ class MCPRuntimeTests(unittest.TestCase):
 
     def test_user_owned_install_does_not_require_administrator(self):
         dest = Path(self.temp.name) / "native-install"
-        env = {**self.env, "SSHWORKSPACE_INSTALL_ROOT": str(dest)}
+        env = {**self.env, "REMOTEWORKSPACE_INSTALL_ROOT": str(dest)}
         result = subprocess.run([BINARY,"install","--user"],env=env,
                                 capture_output=True,text=True,timeout=30)
         self.assertEqual(result.returncode,0,result.stderr)
-        name = "sshworkspace.exe" if os.name == "nt" else "sshworkspace"
+        name = "remoteworkspace.exe" if os.name == "nt" else "remoteworkspace"
         self.assertTrue((dest / name).is_file())
-        self.assertIn("Installed SSH Workspace",result.stdout)
+        self.assertIn("Installed Remote Workspace",result.stdout)
 
     def test_encrypted_local_and_cloud_sync_backups(self):
         add = subprocess.run([BINARY, "host", "add", "backup-test", "192.0.2.40", "operator"],
