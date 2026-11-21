@@ -1,6 +1,6 @@
 ---
 name: ssh-client
-description: Native SSH protocol workflows; authorization-first SSH Workspace workflow.
+description: Native SSH protocol workflows; authorization-first Remote Workspace workflow.
 ---
 
 # Native SSH protocol workflows
