@@ -44,7 +44,10 @@ jobs:
       - name: Stage deliverable
         shell: bash
         run: |
-          mkdir -p dist
+          mkdir -p dist/installer dist/browser/chromium
+          cp README.md dist/README.md
+          cp ../installer/setup.html ../installer/setup.js dist/installer/
+          cp ../browser/chromium/manifest.json ../browser/chromium/popup.html ../browser/chromium/popup.js ../browser/chromium/README.md dist/browser/chromium/
           EXT=""
           if [[ "${{ runner.os }}" == "Windows" ]]; then EXT=".exe"; fi
           cp "target/${{ matrix.target }}/release/sshworkspace${EXT}" "dist/sshworkspace${EXT}"
