@@ -1,4 +1,4 @@
-//! Local-first SSH Workspace companion. No arbitrary command execution tools.
+//! Local-first Remote Workspace companion. No arbitrary command execution tools.
 //! Credentials stay on the user's device. SSH uses an embedded libssh2 engine.
 mod secure_vault;
 use serde::{Deserialize, Serialize};
@@ -70,14 +70,14 @@ fn home() -> PathBuf {
         .map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."))
 }
 fn data_dir() -> PathBuf {
-    if let Some(p) = env::var_os("SSHWORKSPACE_HOME") { return PathBuf::from(p); }
+    if let Some(p) = env::var_os("REMOTEWORKSPACE_HOME") { return PathBuf::from(p); }
     if cfg!(windows) {
-        env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(home).join("ssh-workspace")
+        env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(home).join("remote-workspace")
     } else if cfg!(target_os = "macos") {
-        home().join("Library/Application Support/ssh-workspace")
+        home().join("Library/Application Support/remote-workspace")
     } else {
         env::var_os("XDG_CONFIG_HOME").map(PathBuf::from)
-            .unwrap_or_else(|| home().join(".config")).join("ssh-workspace")
+            .unwrap_or_else(|| home().join(".config")).join("remote-workspace")
     }
 }
 fn ensure_dir(dir: &Path) -> AppResult<()> {
@@ -252,7 +252,7 @@ fn installation_guidance() -> Value {
     json!({
         "platform": env::consts::OS,
         "architecture": env::consts::ARCH,
-        "build_artifacts": "https://github.com/tishriclarin/ssh-workspace/actions/workflows/companion-build.yml",
+        "build_artifacts": "https://github.com/tishriclarin/remote-workspace/actions/workflows/companion-build.yml",
         "instructions": "Choose a verified build matching your OS and CPU, approve the installer, then configure the native MCP companion. Browser extensions and mobile apps require their own approved installations.",
         "cannot_silently_install": true,
         "browser_mcp_tunnel_included": false,
@@ -319,7 +319,7 @@ fn handle_mcp(req: &Value) -> Option<Value> {
     let id = req.get("id")?.clone();
     let method = req.get("method").and_then(Value::as_str).unwrap_or("");
     let response = match method {
-        "initialize" => json!({"protocolVersion":"2025-03-26","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"ssh-workspace-companion","version":VERSION}}),
+        "initialize" => json!({"protocolVersion":"2025-03-26","capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":"remote-workspace-companion","version":VERSION}}),
         "ping" => json!({}),
         "tools/list" => json!({"tools":tools()}),
         "tools/call" => {
@@ -391,8 +391,8 @@ fn register_chromium_host(extension_id: &str) -> AppResult<()> {
     }
     let executable = env::current_exe().map_err(|e| e.to_string())?;
     let manifest = json!({
-        "name": "com.sshworkspace.companion",
-        "description": "SSH Workspace local companion status",
+        "name": "com.remoteworkspace.companion",
+        "description": "Remote Workspace local companion status",
         "path": executable.to_string_lossy().to_string(),
         "type": "stdio",
         "allowed_origins": [format!("chrome-extension://{extension_id}/")]
@@ -402,9 +402,9 @@ fn register_chromium_host(extension_id: &str) -> AppResult<()> {
         use std::process::Command;
         let dir = data_dir().join("native-host");
         ensure_dir(&dir)?;
-        let path = dir.join("com.sshworkspace.companion.json");
+        let path = dir.join("com.remoteworkspace.companion.json");
         save_native_manifest(&path, &manifest)?;
-        let key = r"HKCU\Software\Google\Chrome\NativeMessagingHosts\com.sshworkspace.companion";
+        let key = r"HKCU\Software\Google\Chrome\NativeMessagingHosts\com.remoteworkspace.companion";
         let result = Command::new("reg")
             .args(["add", key, "/ve", "/t", "REG_SZ", "/d"])
             .arg(path.to_string_lossy().to_string()).arg("/f")
@@ -415,7 +415,7 @@ fn register_chromium_host(extension_id: &str) -> AppResult<()> {
     {
         let dir = home().join("Library/Application Support/Google/Chrome/NativeMessagingHosts");
         ensure_dir(&dir)?;
-        save_native_manifest(&dir.join("com.sshworkspace.companion.json"), &manifest)?;
+        save_native_manifest(&dir.join("com.remoteworkspace.companion.json"), &manifest)?;
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {
@@ -424,7 +424,7 @@ fn register_chromium_host(extension_id: &str) -> AppResult<()> {
             home().join(".config/chromium/NativeMessagingHosts"),
         ] {
             ensure_dir(&dir)?;
-            save_native_manifest(&dir.join("com.sshworkspace.companion.json"), &manifest)?;
+            save_native_manifest(&dir.join("com.remoteworkspace.companion.json"), &manifest)?;
         }
     }
     println!("Registered native host for extension {extension_id} (status only).");
@@ -449,13 +449,13 @@ fn tunnel_command() -> AppResult<String> {
 }
 fn tunnel_action(args: &[String]) -> AppResult<()> {
     use std::process::Command;
-    let profile = "ssh-workspace-local";
+    let profile = "remote-workspace-local";
     let action = args.get(2).map(String::as_str).unwrap_or("");
     let mut cmd = Command::new("tunnel-client");
     match action {
         "init" => {
             if args.len() != 4 || !tunnel_id_valid(&args[3]) {
-                return Err("Usage: sshworkspace tunnel init tunnel_<id>".into());
+                return Err("Usage: remoteworkspace tunnel init tunnel_<id>".into());
             }
             cmd.args(["init", "--sample", "sample_mcp_stdio_local", "--profile",
                       profile, "--tunnel-id", &args[3], "--mcp-command", &tunnel_command()?]);
@@ -466,7 +466,7 @@ fn tunnel_action(args: &[String]) -> AppResult<()> {
         "run" if args.len() == 3 => {
             cmd.args(["run", "--profile", profile]);
         }
-        _ => return Err("Usage: sshworkspace tunnel init TUNNEL_ID | doctor | run".into())
+        _ => return Err("Usage: remoteworkspace tunnel init TUNNEL_ID | doctor | run".into())
     }
     let result = cmd.status().map_err(|_| {
         "The official OpenAI tunnel-client is not installed. Obtain the supported binary from https://platform.openai.com/settings/organization/tunnels".to_string()
@@ -477,7 +477,7 @@ fn tunnel_action(args: &[String]) -> AppResult<()> {
 
 
 fn user_install_directory() -> PathBuf {
-    if let Some(root) = env::var_os("SSHWORKSPACE_INSTALL_ROOT") {
+    if let Some(root) = env::var_os("REMOTEWORKSPACE_INSTALL_ROOT") {
         return PathBuf::from(root);
     }
     if cfg!(windows) {
@@ -487,7 +487,7 @@ fn user_install_directory() -> PathBuf {
         home().join("Library/Application Support/SSHWorkspace/bin")
     } else {
         env::var_os("XDG_DATA_HOME").map(PathBuf::from)
-            .unwrap_or_else(|| home().join(".local/share")).join("ssh-workspace/bin")
+            .unwrap_or_else(|| home().join(".local/share")).join("remote-workspace/bin")
     }
 }
 fn install_for_user() -> AppResult<()> {
@@ -495,17 +495,17 @@ fn install_for_user() -> AppResult<()> {
     let source = env::current_exe().map_err(|e| e.to_string())?;
     let target_dir = user_install_directory();
     ensure_dir(&target_dir)?;
-    let name = if cfg!(windows) { "sshworkspace.exe" } else { "sshworkspace" };
+    let name = if cfg!(windows) { "remoteworkspace.exe" } else { "remoteworkspace" };
     let target = target_dir.join(name);
     if source == target {
-        println!("SSH Workspace is already installed at {}", target.display());
+        println!("Remote Workspace is already installed at {}", target.display());
         return Ok(());
     }
     if target.is_symlink() {
         return Err("Refusing to replace a symlinked executable".into());
     }
     // Copy into a new file in the same directory; never write into a privileged OS path.
-    let temporary = target_dir.join(format!(".sshworkspace-install-{}.tmp", process::id()));
+    let temporary = target_dir.join(format!(".remoteworkspace-install-{}.tmp", process::id()));
     let result = (|| -> AppResult<()> {
         let mut existing = File::open(&source).map_err(|e| e.to_string())?;
         let mut opts = OpenOptions::new();
@@ -529,7 +529,7 @@ fn install_for_user() -> AppResult<()> {
     })();
     if result.is_err() { let _ = fs::remove_file(&temporary); }
     result?;
-    println!("Installed SSH Workspace v{VERSION} for this OS user at {}", target.display());
+    println!("Installed Remote Workspace v{VERSION} for this OS user at {}", target.display());
     println!("No administrator privileges or other software installations were requested.");
     Ok(())
 }
@@ -576,7 +576,7 @@ fn vault_command(args: &[String]) -> AppResult<()> {
             println!("Review and remove old hosts.json (still plaintext) when satisfied.");
             Ok(())
         },
-        _ => Err("Usage: sshworkspace vault status | migrate".into())
+        _ => Err("Usage: remoteworkspace vault status | migrate".into())
     }
 }
 fn backup_command(args: &[String]) -> AppResult<()> {
@@ -615,7 +615,7 @@ fn backup_command(args: &[String]) -> AppResult<()> {
         Some("run") if args.len() == 4 => {
             let s = read_settings()?;
             let folder = s.backup.directory.ok_or(
-                "Configure a backup destination first: sshworkspace backup configure local|cloud-sync DIR")?;
+                "Configure a backup destination first: remoteworkspace backup configure local|cloud-sync DIR")?;
             let mode = match s.backup.mode {
                 BackupMode::Local => "local", BackupMode::CloudSync => "cloud-sync"
             };
@@ -629,7 +629,7 @@ fn backup_command(args: &[String]) -> AppResult<()> {
             println!("Encrypted backup restored after explicit confirmation. Previous ciphertext retained for local recovery.");
             Ok(())
         },
-        _ => Err("Usage: sshworkspace backup status | configure local|cloud-sync DIR | run DESCRIPTION | restore FILE --confirm".into())
+        _ => Err("Usage: remoteworkspace backup status | configure local|cloud-sync DIR | run DESCRIPTION | restore FILE --confirm".into())
     }
 }
 
@@ -638,9 +638,9 @@ fn init() -> AppResult<()> {
     ensure_dir(&dir)?;
     if !dir.join("settings.json").exists() { save("settings.json",&Settings::default())?; }
     secure_vault::initialize(&dir)?;
-    println!("SSH Workspace local-first configuration initialized at {}",dir.display());
+    println!("Remote Workspace local-first configuration initialized at {}",dir.display());
     println!("Pin SSH server host keys in ~/.ssh/known_hosts before connecting.");
-    println!("Register this binary as a local stdio MCP server with: sshworkspace mcp");
+    println!("Register this binary as a local stdio MCP server with: remoteworkspace mcp");
     Ok(())
 }
 fn run() -> AppResult<()> {
@@ -676,7 +676,7 @@ fn run() -> AppResult<()> {
                     settings.gateway_mode = GatewayMode::Central;
                     settings.central_mcp_url = Some(url.clone());
                 },
-                _ => return Err("Usage: sshworkspace gateway client | central https://gateway.example/mcp".into())
+                _ => return Err("Usage: remoteworkspace gateway client | central https://gateway.example/mcp".into())
             }
             save("settings.json",&settings)?;
             println!("Gateway mode: {:?}",settings.gateway_mode);
@@ -684,7 +684,7 @@ fn run() -> AppResult<()> {
         },
         Some("host") if args.get(2).map(String::as_str) == Some("add") => {
             if args.len() < 6 || args.len() > 8 {
-                return Err("Usage: sshworkspace host add ALIAS ADDRESS USERNAME [PORT] [IDENTITY_FILE]".into());
+                return Err("Usage: remoteworkspace host add ALIAS ADDRESS USERNAME [PORT] [IDENTITY_FILE]".into());
             }
             let host = Host {
                 alias: args[3].clone(), address: args[4].clone(), username: args[5].clone(),
@@ -701,7 +701,7 @@ fn run() -> AppResult<()> {
             Ok(())
         },
         _ => {
-            println!("SSH Workspace companion v{VERSION}");
+            println!("Remote Workspace companion v{VERSION}");
             println!("  setup          Create local-first settings and host inventory");
             println!("  doctor         Check local settings and host count");
             println!("  gateway client | central HTTPS_URL");
@@ -723,7 +723,7 @@ fn run() -> AppResult<()> {
 }
 fn main() {
     if let Err(error) = run() {
-        eprintln!("sshworkspace: {error}");
+        eprintln!("remoteworkspace: {error}");
         std::process::exit(1);
     }
 }
@@ -758,9 +758,9 @@ mod tests {
     fn native_install_path_is_user_scoped() {
         let path = user_install_directory();
         assert!(!path.as_os_str().is_empty());
-        assert!(path.to_string_lossy().contains("ssh-workspace")
+        assert!(path.to_string_lossy().contains("remote-workspace")
             || path.to_string_lossy().contains("SSHWorkspace")
-            || env::var_os("SSHWORKSPACE_INSTALL_ROOT").is_some());
+            || env::var_os("REMOTEWORKSPACE_INSTALL_ROOT").is_some());
     }
     #[test]
     fn tunnel_id_input_is_bounded() {
