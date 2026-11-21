@@ -55,9 +55,9 @@ jobs:
           cp ../browser/chromium/manifest.json ../browser/chromium/popup.html ../browser/chromium/popup.js ../browser/chromium/README.md dist/browser/chromium/
           EXT=""
           if [[ "${{ runner.os }}" == "Windows" ]]; then EXT=".exe"; fi
-          cp "target/${{ matrix.target }}/release/sshworkspace${EXT}" "dist/sshworkspace${EXT}"
+          cp "target/${{ matrix.target }}/release/remoteworkspace${EXT}" "dist/remoteworkspace${EXT}"
           cd dist
-          if command -v sha256sum >/dev/null 2>&1; then sha256sum "sshworkspace${EXT}" > SHA256SUMS; else shasum -a 256 "sshworkspace${EXT}" > SHA256SUMS; fi
+          if command -v sha256sum >/dev/null 2>&1; then sha256sum "remoteworkspace${EXT}" > SHA256SUMS; else shasum -a 256 "remoteworkspace${EXT}" > SHA256SUMS; fi
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -65,25 +65,25 @@ jobs:
         run: python ../scripts/tests/test_build_desktop_plugin.py
       - name: Smoke test running MCP server
         env:
-          SSHWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }}
+          REMOTEWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/remoteworkspace${{ runner.os == 'Windows' && '.exe' || '' }}
         run: python ../scripts/tests/test_mcp_runtime.py
       - name: Test real SSH key pinning against disposable local sshd
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env:
-          SSHWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/sshworkspace
+          REMOTEWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/remoteworkspace
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y openssh-server
           python ../scripts/tests/test_live_ssh.py
       - name: Package platform-specific desktop plugin
-        run: python ../scripts/build_desktop_plugin.py --binary target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ matrix.target }} --version 0.7.0 --output dist
+        run: python ../scripts/build_desktop_plugin.py --binary target/${{ matrix.target }}/release/remoteworkspace${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ matrix.target }} --version 0.7.0 --output dist
       - name: Validate packaged native MCP execution
         env:
-          SSHWORKSPACE_ARCHIVES: dist
+          REMOTEWORKSPACE_ARCHIVES: dist
         run: python ../scripts/tests/test_archive_runtime.py
       - name: Upload unsigned build for review
         uses: actions/upload-artifact@v4
         with:
-          name: sshworkspace-0.7.0-${{ matrix.target }}
+          name: remoteworkspace-0.7.0-${{ matrix.target }}
           path: companion/dist/
           if-no-files-found: error
