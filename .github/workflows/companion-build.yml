@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'companion/**'
+      - 'scripts/**'
       - '.github/workflows/companion-build.yml'
   pull_request:
     paths:
@@ -53,6 +54,17 @@ jobs:
           cp "target/${{ matrix.target }}/release/sshworkspace${EXT}" "dist/sshworkspace${EXT}"
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then sha256sum "sshworkspace${EXT}" > SHA256SUMS; else shasum -a 256 "sshworkspace${EXT}" > SHA256SUMS; fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate packaging inputs
+        run: python ../scripts/tests/test_build_desktop_plugin.py
+      - name: Smoke test running MCP server
+        env:
+          SSHWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: python ../scripts/tests/test_mcp_runtime.py
+      - name: Package platform-specific desktop plugin
+        run: python ../scripts/build_desktop_plugin.py --binary target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ matrix.target }} --version 0.7.0 --output dist
       - name: Upload unsigned build for review
         uses: actions/upload-artifact@v4
         with:

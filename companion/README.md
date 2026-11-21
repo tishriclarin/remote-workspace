@@ -1,4 +1,4 @@
-# SSH Workspace 0.6.0 — native companion
+# SSH Workspace 0.7.0 — native companion
 
 This directory introduces a **native Rust SSH + MCP engine** alongside the existing Python desktop plugin. Local-first means the device running the companion initiates SSH and holds authentication material. The centralized HTTPS MCP gateway remains an **optional** setting. The companion is not a centralized SSH proxy.
 
@@ -10,7 +10,7 @@ This directory introduces a **native Rust SSH + MCP engine** alongside the exist
 - Authentication using a local private key file or SSH agent. Password storage is **not yet implemented** in the Rust binary; the existing Python vault remains available for legacy desktop deployments.
 - Six read-only MCP tools: gateway status, installation guidance, host aliases, connectivity, OS/CPU, uptime.
 - Browser Native Messaging accepts **status and installation guidance only**. It cannot execute SSH commands and requires an explicitly installed and ID-restricted browser extension.
-- GitHub Actions builds reviewable **unsigned** artifacts for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon. Actual runner availability and build results must be checked.
+- GitHub Actions packages a desktop plugin ZIP and builds reviewable **unsigned** artifacts for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon. Actual runner availability and build results must be checked.
 
 ## Local use
 
@@ -61,4 +61,4 @@ Optional status-only extension sources are in [browser/chromium](../browser/chro
 
 ## CI and verification
 
-Run `cargo test` and `cargo build --release`. GitHub Actions upload artifacts are unsigned CI products, **not verified installers**. See [workflow](../.github/workflows/companion-build.yml).
+Run `cargo test` and `cargo build --release`. GitHub Actions artifacts include a desktop-only plugin ZIP generated from the native binary and checked by MCP smoke tests; these are unsigned CI products, **not verified installers**. See [workflow](../.github/workflows/companion-build.yml).

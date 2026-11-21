@@ -1,6 +1,6 @@
 [package]
 name = "sshworkspace"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 description = "Local-first SSH Workspace native MCP companion"
 license = "MIT"
