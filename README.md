@@ -1,8 +1,43 @@
 # SSH Workspace
 
-**Native companion v0.6.0 development:** The project now includes a Rust SSH/MCP companion in [companion/](companion/README.md), with local gateway selected by default and a central HTTPS gateway as an optional setting. The [GitHub Actions workflow](.github/workflows/companion-build.yml) is configured to compile reviewable desktop binaries; successful CI artifacts are **not yet signed installers**. Browser, Android and iOS native installation and hosted-ChatGPT tunnel integration are documented as pending.
+## Native SSH Workspace v0.7.0 (development)
 
-The legacy Python local-desktop implementation and its encrypted vault are preserved below; its manifest currently remains version 0.3.2 until the native companion is fully integrated into the plugin packaging and tested.
+SSH Workspace is a **local-first MCP/SSH companion**. The user's own device connects to authorized SSH hosts. A **centralized SSH gateway is optional** in settings. Public ChatGPT access to a local companion needs a separately authorized relay/tunnel; the companion does not make a central SSH server mandatory.
+
+The Rust engine lives in [companion/](companion/). The [native build workflow](.github/workflows/companion-build.yml) compiles and tests Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon. It packages a platform-specific desktop-only plugin ZIP containing the compiled Rust MCP server. Artifacts are **unsigned development builds**, not published OS installers.
+
+The current native interface deliberately supports only bounded, read-only MCP tools (host aliases, connectivity, OS/architecture and uptime). It validates SSH host keys against trusted known_hosts entries and supports keys/SSH-agent authentication. General shell execution, device configuration changes, a Rust encrypted password vault, and native Android/iOS apps are **not yet implemented**.
+
+### Native companion commands
+
+    sshworkspace setup
+    sshworkspace install --user
+    sshworkspace host add lab 192.0.2.10 operator 22 /absolute/path/to/ssh-key
+    sshworkspace doctor
+    sshworkspace mcp
+    sshworkspace gateway client
+    sshworkspace gateway central https://gateway.example.com/mcp
+
+The first run creates a private per-user configuration. Before using SSH, independently verify and pin the host's public key in the applicable OpenSSH known_hosts file. Central gateway mode stores the endpoint but does not yet implement transparent forwarding.
+
+### Secure MCP Tunnel for private testing
+
+To reach a local companion from hosted ChatGPT without a publicly exposed SSH or MCP server, use the supported **OpenAI Secure MCP Tunnel client**. After obtaining a tunnel ID and runtime API key from the official management portal, install the official tunnel-client and run:
+
+    sshworkspace tunnel init tunnel_0123456789abcdef0123456789abcdef
+    sshworkspace tunnel doctor
+    sshworkspace tunnel run
+
+Keep CONTROL_PLANE_API_KEY in an OS-protected environment/secret store; do not paste it in chat. The tunnel is separate from the SSH transport, and private tunnel access is **not** sufficient for publishing a public remote MCP plugin. A local desktop plugin and a public web plugin are separate deployment channels.
+
+### Current release criteria
+
+Tracked work: [desktop signing](https://github.com/tishriclarin/ssh-workspace/issues/1), [hosted ChatGPT pairing and relay](https://github.com/tishriclarin/ssh-workspace/issues/2), [Android](https://github.com/tishriclarin/ssh-workspace/issues/3), [iOS](https://github.com/tishriclarin/ssh-workspace/issues/4), and [permission-controlled operations](https://github.com/tishriclarin/ssh-workspace/issues/5).
+
+### Legacy Python plugin
+
+The older Python-based local desktop plugin remains available for existing users. Its legacy instructions are retained below; its root manifest is not the new native desktop package.
+
 
 ---
 
