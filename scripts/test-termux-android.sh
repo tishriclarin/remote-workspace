@@ -23,13 +23,19 @@ echo "[4/5] Run unit tests and build native Android/Termux binary"
 cargo test
 cargo build --release
 BIN="$PWD/target/release/remoteworkspace"
-"$BIN" --help || true
+"$BIN" doctor
 echo "[5/5] MCP protocol read-only smoke test"
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"termux-smoke-test","version":"1"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"run_shell","arguments":{"command":"touch /tmp/unsafe"}}}' | "$BIN" mcp | tee "$HOME/remote-workspace-mcp-test.jsonl"
 if grep -q '"name":"execute_command"' "$HOME/remote-workspace-mcp-test.jsonl"; then
   echo "FAIL: unsafe command tool exposed"; exit 1
 fi
-if ! grep -q '"isError":true' "$HOME/remote-workspace-mcp-test.jsonl"; then
+if ! grep -q '"id":1' "$HOME/remote-workspace-mcp-test.jsonl" || ! grep -q '"protocolVersion"' "$HOME/remote-workspace-mcp-test.jsonl"; then
+  echo "FAIL: MCP initialization response missing"; exit 1
+fi
+if ! grep -q '"id":2' "$HOME/remote-workspace-mcp-test.jsonl" || ! grep -q '"tools"' "$HOME/remote-workspace-mcp-test.jsonl"; then
+  echo "FAIL: MCP tool listing missing"; exit 1
+fi
+if ! grep -q '"id":3' "$HOME/remote-workspace-mcp-test.jsonl" || ! grep -Eq '"isError":[[:space:]]*true|"code":[[:space:]]*-32601' "$HOME/remote-workspace-mcp-test.jsonl"; then
   echo "FAIL: unsafe tool was not rejected"; exit 1
 fi
 echo "PASS: Android binary built; MCP initialized; unsafe write rejected"
