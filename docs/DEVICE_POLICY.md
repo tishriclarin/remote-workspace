@@ -1,6 +1,6 @@
 # Remote Workspace device authorization policy
 
-This project is currently named SSH Workspace. Future product name: **Remote Workspace**. Preserve existing binary and package names until an explicit, tested migration; design policy independently of transport.
+This project is currently named Remote Workspace. Future product name: **Remote Workspace**. Preserve existing binary and package names until an explicit, tested migration; design policy independently of transport.
 
 ## Immutable security defaults
 
