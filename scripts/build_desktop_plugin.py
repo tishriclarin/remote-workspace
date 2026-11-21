@@ -105,7 +105,7 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         json_file(stage / ".codex-plugin/plugin.json", manifest)
         # Package protocols and vendor-specific skill instructions.
         required_skills = (
-            "ssh-client", "device-inventory", "vendor-mikrotik",
+            "remote-safety", "remote-workspace", "ssh-client", "device-inventory", "vendor-mikrotik",
             "vendor-cisco", "vendor-juniper", "vendor-huawei",
             "vendor-zte", "telnet-legacy"
         )
