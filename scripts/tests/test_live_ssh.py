@@ -10,7 +10,7 @@ import tempfile
 import time
 import unittest
 
-BIN = os.getenv("SSHWORKSPACE_BIN")
+BIN = os.getenv("REMOTEWORKSPACE_BIN")
 SSHD = shutil.which("sshd") or ("/usr/sbin/sshd" if Path("/usr/sbin/sshd").is_file() else None)
 KEYGEN = shutil.which("ssh-keygen")
 
@@ -22,7 +22,7 @@ class LiveSSHTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.dir = Path(self.temp.name)
         self.env = dict(os.environ)
-        self.env.update({"SSHWORKSPACE_HOME":str(self.dir / "cfg"),"HOME":str(self.dir)})
+        self.env.update({"REMOTEWORKSPACE_HOME":str(self.dir / "cfg"),"HOME":str(self.dir)})
         ssh_dir = self.dir / ".ssh"
         ssh_dir.mkdir(mode=0o700)
         self.hostkey = self.dir / "ssh_host_ed25519_key"
