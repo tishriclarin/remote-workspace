@@ -68,6 +68,25 @@ jobs:
               exit 1
             fi
           done
+      - name: Accept Android API 28 boundary before companion invocation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mock_dir=$(mktemp -d)
+          trap 'rm -rf -- "$mock_dir"' EXIT
+          printf '#!/bin/sh\nprintf "aarch64\\n"\n' > "$mock_dir/uname"
+          printf '#!/bin/sh\nprintf "28\\n"\n' > "$mock_dir/getprop"
+          # Distinct exit code proves the SDK guard allowed execution.
+          printf '#!/bin/sh\n[ "$1" = doctor ] && exit 73\nexit 99\n' > "$mock_dir/companion"
+          chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
+          set +e
+          PATH="$mock_dir:$PATH" bash scripts/test-termux-android.sh "$mock_dir/companion"
+          status=$?
+          set -e
+          if [[ "$status" -ne 73 ]]; then
+            printf 'Expected API 28 to invoke companion doctor (exit 73), got %s\\n' "$status" >&2
+            exit 1
+          fi
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
