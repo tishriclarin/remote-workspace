@@ -1,4 +1,4 @@
-//! Outbound device agent. Explicitly run on the same machine as sshworkspace.
+//! Outbound device agent. Explicitly run on the same machine as remoteworkspace.
 //! No inbound ports. All SSH commands are still enforced by the Rust companion.
 use serde_json::{json,Value};
 use std::{env,process::Stdio,time::Duration};
@@ -23,13 +23,13 @@ async fn execute(binary: &str, name: &str, arguments: Value) -> Result<Value,Str
 }
 #[tokio::main]
 async fn main()->Result<(),Box<dyn std::error::Error>> {
-    let base=env::var("SSHWORKSPACE_GATEWAY_URL")?;
+    let base=env::var("REMOTEWORKSPACE_GATEWAY_URL")?;
     if !base.starts_with("https://") && !base.starts_with("http://127.0.0.1:") && !base.starts_with("http://localhost:") {
         return Err("Gateway URL must be HTTPS except loopback development".into());
     }
-    let token=env::var("SSHWORKSPACE_DEVICE_TOKEN")?;
+    let token=env::var("REMOTEWORKSPACE_DEVICE_TOKEN")?;
     if token.len()<32 {return Err("Device token too short".into());}
-    let binary=env::var("SSHWORKSPACE_COMPANION_BIN").unwrap_or_else(|_|"sshworkspace".into());
+    let binary=env::var("REMOTEWORKSPACE_COMPANION_BIN").unwrap_or_else(|_|"remoteworkspace".into());
     let client=reqwest::Client::builder().timeout(Duration::from_secs(25)).build()?;
     loop {
         let job=client.get(format!("{}/device/poll",base.trim_end_matches('/'))).bearer_auth(&token).send().await;
