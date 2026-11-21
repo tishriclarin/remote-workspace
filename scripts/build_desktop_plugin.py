@@ -56,10 +56,18 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         if name != "sshworkspace.exe":
             executable.chmod(0o755)
         root_placeholder = "$" + "{PLUGIN_ROOT}"
-        json_file(stage / ".mcp.json", {"mcpServers": {
-            "ssh-workspace": {"command": root_placeholder + "/bin/" + name,
-                              "args": ["mcp"], "cwd": root_placeholder}
-        }})
+        mcp_entry = {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+            "mcpServers": {
+                "ssh-workspace": {
+                    "type": "stdio",
+                    "command": root_placeholder + "/bin/" + name,
+                    "args": ["mcp"], "cwd": root_placeholder
+                }
+            }
+        }
+        json_file(stage / "mcp.json", mcp_entry)
+        json_file(stage / ".mcp.json", mcp_entry)
         manifest = {
             "name": "ssh-workspace", "version": version,
             "description": "Local-first, read-only SSH diagnostics from a native companion.",
@@ -83,7 +91,31 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
             shutil.copy2(logo, stage / "assets/logo.webp")
             manifest["interface"].update({
                 "logo": "./assets/logo.webp", "composerIcon": "./assets/logo.webp"})
+        json_file(stage / "plugin.json", {
+            "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+            "name": "ssh-workspace", "version": version,
+            "description": manifest["description"],
+            "repository": manifest["repository"],
+            "license": "MIT",
+            "extensions": {"com.openai": {
+                "requires_local_executor": True,
+                "interface": manifest["interface"]
+            }}
+        })
         json_file(stage / ".codex-plugin/plugin.json", manifest)
+        # Package protocols and vendor-specific skill instructions.
+        required_skills = (
+            "ssh-client", "device-inventory", "vendor-mikrotik",
+            "vendor-cisco", "vendor-juniper", "vendor-huawei",
+            "vendor-zte", "telnet-legacy"
+        )
+        for skill in required_skills:
+            skill_source = root / "skills" / skill / "SKILL.md"
+            if not skill_source.is_file():
+                raise ValueError("Missing protocol/vendor skill: " + skill)
+            target_skill = stage / "skills" / skill / "SKILL.md"
+            target_skill.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(skill_source, target_skill)
         skill_path = stage / "skills/ssh-workspace/SKILL.md"
         skill_path.parent.mkdir(parents=True)
         skill_path.write_text(

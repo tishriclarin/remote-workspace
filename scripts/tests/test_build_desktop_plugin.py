@@ -17,6 +17,12 @@ class PackagingTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "LICENSE").write_text("MIT License\\n")
         (self.root / "NOTICE").write_text("SSH Workspace\\n")
+        for skill in ("ssh-client", "device-inventory", "vendor-mikrotik",
+                      "vendor-cisco", "vendor-juniper", "vendor-huawei",
+                      "vendor-zte", "telnet-legacy"):
+            target = self.root / "skills" / skill / "SKILL.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("# Test skill\n", encoding="utf-8")
         self.binary = self.root / "sshworkspace"
         self.binary.write_bytes(b"\x7fELF" + b"\0" * 2048)
 
@@ -26,11 +32,16 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(Path(str(path) + ".sha256").exists())
         with zipfile.ZipFile(path) as zipf:
             names = zipf.namelist()
-            for name in [".codex-plugin/plugin.json", ".mcp.json", "bin/sshworkspace", "LICENSE", "NOTICE",
+            for name in ["plugin.json", "mcp.json", ".codex-plugin/plugin.json", ".mcp.json", "bin/sshworkspace", "LICENSE", "NOTICE", "skills/vendor-mikrotik/SKILL.md", "skills/telnet-legacy/SKILL.md",
                          "skills/ssh-workspace/SKILL.md", "BUILD-INFO.json"]:
                 self.assertIn(name, names)
             manifest = json.loads(zipf.read(".codex-plugin/plugin.json"))
-            conf = json.loads(zipf.read(".mcp.json"))
+            conf = json.loads(zipf.read("mcp.json"))
+            self.assertEqual(conf, json.loads(zipf.read(".mcp.json")))
+            self.assertEqual(conf["mcpServers"]["ssh-workspace"]["type"], "stdio")
+            root_manifest = json.loads(zipf.read("plugin.json"))
+            self.assertEqual(root_manifest["name"], "ssh-workspace")
+            self.assertTrue(root_manifest["extensions"]["com.openai"]["requires_local_executor"])
             info = json.loads(zipf.read("BUILD-INFO.json"))
             self.assertEqual(manifest["version"], "0.7.0")
             self.assertEqual(conf["mcpServers"]["ssh-workspace"]["command"],
