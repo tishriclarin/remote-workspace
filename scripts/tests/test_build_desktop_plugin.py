@@ -23,6 +23,10 @@ class PackagingTests(unittest.TestCase):
             target = self.root / "skills" / skill / "SKILL.md"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("# Test skill\n", encoding="utf-8")
+        for name in ("AGENTS.md", "docs/DEVICE_POLICY.md", "gateway/README.md"):
+            document = self.root / name
+            document.parent.mkdir(parents=True, exist_ok=True)
+            document.write_text("# Test documentation\n", encoding="utf-8")
         self.binary = self.root / "remoteworkspace"
         self.binary.write_bytes(b"\x7fELF" + b"\0" * 2048)
 
@@ -35,6 +39,9 @@ class PackagingTests(unittest.TestCase):
             for name in ["plugin.json", "mcp.json", ".codex-plugin/plugin.json", ".mcp.json", "bin/remoteworkspace", "LICENSE", "NOTICE", "skills/vendor-mikrotik/SKILL.md", "skills/telnet-legacy/SKILL.md",
                          "skills/remote-workspace/SKILL.md", "BUILD-INFO.json"]:
                 self.assertIn(name, names)
+            for name in ("AGENTS.md", "docs/DEVICE_POLICY.md", "gateway/README.md",
+                         "skills/remote-workspace/SKILL.md"):
+                self.assertEqual(zipf.read(name), (self.root / name).read_bytes())
             manifest = json.loads(zipf.read(".codex-plugin/plugin.json"))
             conf = json.loads(zipf.read("mcp.json"))
             self.assertEqual(conf, json.loads(zipf.read(".mcp.json")))
