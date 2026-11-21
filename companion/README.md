@@ -45,6 +45,10 @@ Desktop users can download a verified binary artifact once the GitHub Actions bu
 
 The native companion is designed to support these later integrations without moving SSH private keys to a central service.
 
+## Chromium extension preview
+
+Optional status-only extension sources are in [browser/chromium](../browser/chromium/README.md). Install it with browser approval and register its exact extension ID using the native binary. This is not a ChatGPT MCP tunnel.
+
 ## Security boundaries
 
 - No generic `run_command`, terminal, credential reveal, or unsafe tool; fixed, bounded diagnostic commands only.

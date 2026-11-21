@@ -323,6 +323,64 @@ fn native_messaging() -> AppResult<()> {
     }
     Ok(())
 }
+
+fn save_native_manifest(path: &Path, manifest: &Value) -> AppResult<()> {
+    let mut options = OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)] {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path).map_err(|e| e.to_string())?;
+    serde_json::to_writer_pretty(&mut file, manifest).map_err(|e| e.to_string())
+}
+fn register_chromium_host(extension_id: &str) -> AppResult<()> {
+    // A Chrome extension ID is 32 lowercase characters a through p.
+    if extension_id.len() != 32 || !extension_id.bytes().all(|b| (b'a'..=b'p').contains(&b)) {
+        return Err("Supply the 32-letter extension ID shown by Chromium after installation".into());
+    }
+    let executable = env::current_exe().map_err(|e| e.to_string())?;
+    let manifest = json!({
+        "name": "com.sshworkspace.companion",
+        "description": "SSH Workspace local companion status",
+        "path": executable.to_string_lossy().to_string(),
+        "type": "stdio",
+        "allowed_origins": [format!("chrome-extension://{extension_id}/")]
+    });
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        let dir = data_dir().join("native-host");
+        ensure_dir(&dir)?;
+        let path = dir.join("com.sshworkspace.companion.json");
+        save_native_manifest(&path, &manifest)?;
+        let key = r"HKCU\Software\Google\Chrome\NativeMessagingHosts\com.sshworkspace.companion";
+        let result = Command::new("reg")
+            .args(["add", key, "/ve", "/t", "REG_SZ", "/d"])
+            .arg(path.to_string_lossy().to_string()).arg("/f")
+            .status().map_err(|e| e.to_string())?;
+        if !result.success() { return Err("Could not register Chrome native messaging host".into()); }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let dir = home().join("Library/Application Support/Google/Chrome/NativeMessagingHosts");
+        ensure_dir(&dir)?;
+        save_native_manifest(&dir.join("com.sshworkspace.companion.json"), &manifest)?;
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        for dir in [
+            home().join(".config/google-chrome/NativeMessagingHosts"),
+            home().join(".config/chromium/NativeMessagingHosts"),
+        ] {
+            ensure_dir(&dir)?;
+            save_native_manifest(&dir.join("com.sshworkspace.companion.json"), &manifest)?;
+        }
+    }
+    println!("Registered native host for extension {extension_id} (status only).");
+    Ok(())
+}
+
 fn init() -> AppResult<()> {
     let dir = data_dir();
     ensure_dir(&dir)?;
@@ -338,6 +396,8 @@ fn run() -> AppResult<()> {
     match args.get(1).map(String::as_str) {
         Some("mcp") => mcp_stdio(),
         Some("native-messaging") => native_messaging(),
+        Some(v) if v.starts_with("chrome-extension://") => native_messaging(),
+        Some("register-chrome") => register_chromium_host(args.get(2).ok_or("Missing extension ID")?),
         Some("setup") => init(),
         Some("doctor") | Some("status") => {
             println!("{}",serde_json::to_string_pretty(&gateway_status()?).map_err(|e| e.to_string())?);
@@ -391,6 +451,7 @@ fn run() -> AppResult<()> {
             println!("  host add ALIAS ADDRESS USERNAME [PORT] [IDENTITY_FILE]");
             println!("  mcp            Run local stdio MCP server");
             println!("  native-messaging  Browser extension status host (no SSH command API)");
+            println!("  register-chrome EXTENSION_ID  Restrict native-host status to this extension");
             println!("  install        Print platform-specific setup guidance");
             Ok(())
         }
