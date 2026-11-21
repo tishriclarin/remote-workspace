@@ -1,23 +1,23 @@
-# SSH Workspace Rust remote MCP gateway
+# Remote Workspace Rust remote MCP gateway
 
-The gateway and device agent are **Rust**. The ChatGPT-facing service exposes `POST /mcp` with JSON-RPC MCP methods. The device agent uses outbound HTTP(S) polling and invokes only allowlisted read-only tools in the existing local `sshworkspace mcp` companion. SSH credentials and private keys remain on the device.
+The gateway and device agent are **Rust**. The ChatGPT-facing service exposes `POST /mcp` with JSON-RPC MCP methods. The device agent uses outbound HTTP(S) polling and invokes only allowlisted read-only tools in the existing local `remoteworkspace mcp` companion. SSH credentials and private keys remain on the device.
 
 ## Local development
 
 ```bash
 cd gateway
-export SSHWORKSPACE_GATEWAY_TOKEN="$(openssl rand -hex 32)"
-export SSHWORKSPACE_DEVICE_TOKEN="$(openssl rand -hex 32)"
-cargo run --bin sshworkspace-gateway
+export REMOTEWORKSPACE_GATEWAY_TOKEN="$(openssl rand -hex 32)"
+export REMOTEWORKSPACE_DEVICE_TOKEN="$(openssl rand -hex 32)"
+cargo run --bin remoteworkspace-gateway
 ```
 
 On a second terminal on the same computer, using the same device token and a previously compiled Rust SSH companion:
 
 ```bash
 cd gateway
-export SSHWORKSPACE_GATEWAY_URL=http://127.0.0.1:8787
-export SSHWORKSPACE_DEVICE_TOKEN="THE_SAME_DEVICE_TOKEN"
-export SSHWORKSPACE_COMPANION_BIN=/absolute/path/to/sshworkspace
+export REMOTEWORKSPACE_GATEWAY_URL=http://127.0.0.1:8787
+export REMOTEWORKSPACE_DEVICE_TOKEN="THE_SAME_DEVICE_TOKEN"
+export REMOTEWORKSPACE_COMPANION_BIN=/absolute/path/to/remoteworkspace
 cargo run --bin device
 ```
 
