@@ -68,7 +68,9 @@ def snapshot_name(description: str, at: datetime | None = None) -> tuple[str, st
         raise QVMError("Description must be between 1 and 200 characters")
     if any(ord(c) < 32 or ord(c) == 127 for c in description):
         raise QVMError("Description cannot contain control characters")
-    at = (at or datetime.now(timezone.utc)).astimezone()
+    at = at if at is not None else datetime.now().astimezone()
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise QVMError("Snapshot timestamps must include an explicit timezone")
     local_time = at.isoformat(timespec="seconds")
     utc_time = at.astimezone(timezone.utc).isoformat(timespec="seconds")
     slug = re.sub(r"[^a-z0-9]+", "-", description.lower()).strip("-")[:55] or "snapshot"
