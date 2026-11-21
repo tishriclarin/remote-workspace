@@ -375,6 +375,10 @@ fn native_messaging() -> AppResult<()> {
 }
 
 fn save_native_manifest(path: &Path, manifest: &Value) -> AppResult<()> {
+    // Never follow an attacker-controlled symlink when registering a browser host.
+    if path.symlink_metadata().is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+        return Err("Refusing to overwrite a symlinked native-messaging manifest".into());
+    }
     let mut options = OpenOptions::new();
     options.write(true).create(true).truncate(true);
     #[cfg(unix)] {
@@ -767,6 +771,19 @@ mod tests {
         assert!(tunnel_id_valid("tunnel_0123456789abcdef0123456789abcdef"));
         assert!(!tunnel_id_valid("tunnel_;rm -rf /"));
         assert!(!tunnel_id_valid("unknown"));
+    }
+    #[cfg(unix)]
+    #[test]
+    fn native_manifest_rejects_symlink_without_touching_target() {
+        use std::os::unix::fs::symlink;
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("sensitive.txt");
+        fs::write(&target, b"untouched").unwrap();
+        let link = dir.path().join("native-host.json");
+        symlink(&target, &link).unwrap();
+        let result = save_native_manifest(&link, &json!({"name":"test"}));
+        assert!(result.is_err());
+        assert_eq!(fs::read(&target).unwrap(), b"untouched");
     }
     #[test]
     fn notifications_have_no_response() {
