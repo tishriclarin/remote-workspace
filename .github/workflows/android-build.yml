@@ -51,7 +51,7 @@ jobs:
           mock_dir=$(mktemp -d)
           trap 'rm -rf -- "$mock_dir"' EXIT
           printf '#!/bin/sh\nprintf "aarch64\\n"\n' > "$mock_dir/uname"
-          printf '#!/bin/sh\nprintf "%%s\\n" "${TEST_SDK}"\n' > "$mock_dir/getprop"
+          printf '#!/bin/sh\nprintf "%s\\n" "${TEST_SDK}"\n' > "$mock_dir/getprop"
           chmod 755 "$mock_dir/uname" "$mock_dir/getprop"
           for sdk in 27 invalid; do
             set +e
