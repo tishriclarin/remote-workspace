@@ -1,0 +1,23 @@
+name: QVM test-lab unit tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'testlab/**'
+      - '.github/workflows/qvm-tests.yml'
+  pull_request:
+    paths:
+      - 'testlab/**'
+      - '.github/workflows/qvm-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify snapshot CLI and metadata tests
+        run: python3 -m unittest discover -s testlab/tests -v
+      - name: Check script syntax
+        run: python3 -m py_compile testlab/qvm.py

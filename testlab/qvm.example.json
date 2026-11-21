@@ -1,0 +1,12 @@
+{
+  "default_vm": "linux-lab",
+  "machines": {
+    "linux-lab": {
+      "backend": "libvirt-qcow2",
+      "domain": "linux-lab",
+      "disk": "/srv/ssh-testlab/vms/linux-lab.qcow2",
+      "template": "/srv/ssh-testlab/templates/linux-lab-golden.qcow2",
+      "archives": "/srv/ssh-testlab/archives/linux-lab"
+    }
+  }
+}
