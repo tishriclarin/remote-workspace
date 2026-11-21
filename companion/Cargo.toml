@@ -1,10 +1,10 @@
 [package]
-name = "sshworkspace"
+name = "remoteworkspace"
 version = "0.7.0"
 edition = "2021"
-description = "Local-first SSH Workspace native MCP companion"
+description = "Local-first Remote Workspace native MCP companion"
 license = "MIT"
-repository = "https://github.com/tishriclarin/ssh-workspace"
+repository = "https://github.com/tishriclarin/remote-workspace"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
