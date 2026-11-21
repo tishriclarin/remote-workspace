@@ -30,6 +30,10 @@ For **optional** private web/mobile testing when no host-managed local MCP execu
 
 Keep CONTROL_PLANE_API_KEY in an OS-protected environment/secret store; do not paste it in chat. The tunnel is separate from the SSH transport, and private tunnel access is **not** sufficient for publishing a public remote MCP plugin. A local desktop plugin and a public web plugin are separate deployment channels.
 
+### Secure vault recovery
+
+The encrypted vault has optional Argon2id passphrase-protected recovery export for restoring a ciphertext backup on a replacement device. See [portable vault recovery](docs/VAULT_RECOVERY.md). This export requires a trusted local terminal; do not share recovery passphrases in ChatGPT.
+
 ### Current release criteria
 
 Tracked work: [desktop signing](https://github.com/tishriclarin/ssh-workspace/issues/1), [hosted ChatGPT pairing and relay](https://github.com/tishriclarin/ssh-workspace/issues/2), [Android](https://github.com/tishriclarin/ssh-workspace/issues/3), [iOS](https://github.com/tishriclarin/ssh-workspace/issues/4), and [permission-controlled operations](https://github.com/tishriclarin/ssh-workspace/issues/5).
