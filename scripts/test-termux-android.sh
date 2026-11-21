@@ -10,8 +10,21 @@ fi
 
 # An ARM64 Linux host is not necessarily Android. Require Android's system
 # property service before invoking any supplied executable.
-if ! command -v getprop >/dev/null 2>&1 || ! [[ "$(getprop ro.build.version.sdk 2>/dev/null)" =~ ^[0-9]+$ ]]; then
+if ! command -v getprop >/dev/null 2>&1; then
   echo 'ERROR: Android system property service required' >&2
+  exit 2
+fi
+SDK=$(getprop ro.build.version.sdk 2>/dev/null) || {
+  echo 'ERROR: Android SDK property unavailable' >&2
+  exit 2
+}
+if [[ ! "$SDK" =~ ^[0-9]+$ ]]; then
+  echo 'ERROR: Android SDK property invalid' >&2
+  exit 2
+fi
+# The Android artifact is compiled with cargo-ndk -p 28.
+if (( 10#$SDK < 28 )); then
+  echo 'ERROR: Android API level 28 or newer required' >&2
   exit 2
 fi
 
