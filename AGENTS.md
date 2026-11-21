@@ -31,3 +31,10 @@ These are the owner's persistent implementation and communication preferences fo
 - Summarize actionable progress and any true remaining blockers without speculative warnings.
 
 These preferences are project guidance, not a claim that a repository can modify the global ChatGPT model or guarantee memory retention forever.
+
+## Rust-only baseline (November 2026)
+
+- The project has never been deployed to any user device; CI builds are not deployments.
+- Rust is the sole supported application implementation. Do not restore or maintain the legacy Python server, vault, launcher, or Python packaging pipeline.
+- Prioritize implementing and testing the native Rust companion, MCP interface, and security boundaries. Use Cargo tests and native CI, not Python regression workflows.
+- For clearly authorized repository cleanup, execute and commit safe changes rather than requesting repeated confirmation. Git history is the recovery mechanism.
