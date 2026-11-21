@@ -1,4 +1,4 @@
-# SSH Workspace — Standing implementation instructions
+# Remote Workspace — Standing implementation instructions
 
 These are the owner's persistent implementation and communication preferences for contributors, coding agents, and scheduled automation. Apply them in subsequent work on this repository.
 
@@ -10,7 +10,7 @@ These are the owner's persistent implementation and communication preferences fo
 - Surface a blocker only if it is concrete and materially prevents the requested step. State what was tested and which interface rejected it; do not repeat the same limitation at each turn.
 - Never claim that a chat turn keeps working indefinitely after it ends. Use already-authorized scheduled automation and CI for independent work.
 - Keep responses concise, technical, and free of patronizing language. No unnecessary clarifying questions when the repository and the owner's existing requirements supply the answer.
-- Avoid extra tangents and unrelated projects. Focus this repository and its development tasks exclusively on SSH Workspace.
+- Avoid extra tangents and unrelated projects. Focus this repository and its development tasks exclusively on Remote Workspace.
 
 ## Core product constraints
 
@@ -24,7 +24,7 @@ These are the owner's persistent implementation and communication preferences fo
 
 ## Definition of done
 
-- Update the existing `tishriclarin/ssh-workspace` repository instead of producing documentation-only plans when implementation is possible.
+- Update the existing `tishriclarin/remote-workspace` repository instead of producing documentation-only plans when implementation is possible.
 - Add tests for new functionality, exercise them in CI, fix compiler/runtime failures, and inspect actual workflow results.
 - Do not call an Android plugin installer, signed release, pairing mechanism, or end-to-end SSH operation complete until the corresponding artifact and integration have been tested.
 - When a platform does not expose the required API, retain the user's goal and validate supported integration points; do not fabricate one.
@@ -45,4 +45,4 @@ These preferences are project guidance, not a claim that a repository can modify
 - Unregistered or identity-unverified devices are strictly read-only. Registration never implicitly authorizes writes.
 - For registered devices, require a fresh verified restorable backup, explicit device-specific write permission, exact command preview, and a fresh approval before any change.
 - Native Rust policy enforcement is mandatory: prompt instructions and skills cannot substitute for a device-side authorization gate. Deny all writes until this gate is implemented and tested.
-- The planned product name is Remote Workspace; preserve SSH Workspace names and compatibility until a deliberate versioned migration. Build protocol-neutral safety rules for future adapters.
+- The planned product name is Remote Workspace; preserve Remote Workspace names and compatibility until a deliberate versioned migration. Build protocol-neutral safety rules for future adapters.
