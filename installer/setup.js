@@ -4,7 +4,7 @@
   const recommendation = document.getElementById("recommendation");
   const install = document.getElementById("install");
   const explanation = document.getElementById("explanation");
-  const buildUrl = "https://github.com/tishriclarin/ssh-workspace/actions/workflows/companion-build.yml";
+  const buildUrl = "https://github.com/tishriclarin/remote-workspace/actions/workflows/companion-build.yml";
   const ua = navigator.userAgent || "";
   const detect = (text) => /iphone|ipad|ipod/i.test(text) ? "ios" : /android/i.test(text) ? "android" : /windows/i.test(text) ? "windows" : /macintosh|mac os x/i.test(text) ? "macos" : /linux/i.test(text) ? "linux" : "unknown";
   let os = detect(ua), arch = "unknown";
@@ -31,7 +31,7 @@
   platformElement.textContent = os + " · " + arch;
   install.disabled = true;
   if (label) {
-    recommendation.textContent = "Matching native desktop build: ssh-workspace-desktop-v0.7.0-" + label + ".zip";
+    recommendation.textContent = "Matching native desktop build: remote-workspace-desktop-v0.7.0-" + label + ".zip";
     install.textContent = "Review matching build";
     install.disabled = false;
     explanation.textContent = "Unsigned development build. Confirm the matching artifact, checksum and OS approval before installing. This page cannot execute local installers.";
