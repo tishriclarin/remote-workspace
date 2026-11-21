@@ -29,6 +29,19 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y perl make cmake pkg-config
           cargo install cargo-ndk --locked
+      - name: Validate Termux smoke-test script on Linux runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/test-termux-android.sh
+          set +e
+          output=$(bash scripts/test-termux-android.sh /nonexistent/remoteworkspace 2>&1)
+          status=$?
+          set -e
+          if [[ "$status" -ne 2 ]] || [[ "$output" != *'Android ARM64 device required'* ]]; then
+            printf 'Expected unsupported-host exit 2, got %s: %s\n' "$status" "$output" >&2
+            exit 1
+          fi
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
