@@ -1,4 +1,4 @@
-# SSH Workspace 0.7.0 — native companion
+# Remote Workspace 0.7.0 — native companion
 
 This directory introduces a **native Rust SSH + MCP engine** as the sole supported application implementation. Local-first means the device running the companion initiates SSH and holds authentication material. The centralized HTTPS MCP gateway remains an **optional** setting. The companion is not a centralized SSH proxy.
 
@@ -25,22 +25,22 @@ A centralized SSH gateway is always optional. Secure MCP Tunnel is an opt-in fal
 ```sh
 cd companion
 cargo build --release
-./target/release/sshworkspace setup
-./target/release/sshworkspace host add lab 192.0.2.10 operator 22 ~/.ssh/id_ed25519
-./target/release/sshworkspace doctor
-./target/release/sshworkspace mcp
+./target/release/remoteworkspace setup
+./target/release/remoteworkspace host add lab 192.0.2.10 operator 22 ~/.ssh/id_ed25519
+./target/release/remoteworkspace doctor
+./target/release/remoteworkspace mcp
 ```
 
 Replace example host and username with an authorized system, and independently verify its SSH host-key fingerprint before adding an entry to `~/.ssh/known_hosts`. Do **not** blindly trust an `ssh-keyscan` result. The program never disables strict host-key checks.
 
-By default settings and host aliases are stored in the current user's SSH Workspace configuration directory (Windows `%APPDATA%\\ssh-workspace`, macOS `~/Library/Application Support/ssh-workspace`, Linux `~/.config/ssh-workspace`). Set `SSHWORKSPACE_HOME` to override. Unix config files are owner-only.
+By default settings and host aliases are stored in the current user's Remote Workspace configuration directory (Windows `%APPDATA%\\remote-workspace`, macOS `~/Library/Application Support/remote-workspace`, Linux `~/.config/remote-workspace`). Set `REMOTEWORKSPACE_HOME` to override. Unix config files are owner-only.
 
 ## Gateway options
 
 ```sh
-sshworkspace gateway client
-sshworkspace gateway central https://your-domain.example/mcp
-sshworkspace status
+remoteworkspace gateway client
+remoteworkspace gateway central https://your-domain.example/mcp
+remoteworkspace status
 ```
 
 Central mode records the HTTPS endpoint but **does not implement transparent remote forwarding**. To use a centralized gateway, register that server's MCP endpoint through ChatGPT's supported connection flow.
@@ -73,21 +73,21 @@ Run `cargo test` and `cargo build --release`. GitHub Actions artifacts include a
 
 ## Supported private ChatGPT tunnel (developer connection)
 
-The official OpenAI Secure MCP Tunnel client supports stdio MCP targets. SSH Workspace now provides a small convenience CLI that creates a dedicated profile for the currently installed Rust companion. It uses only the installed, official tunnel-client executable and does not ask for or write API keys itself.
+The official OpenAI Secure MCP Tunnel client supports stdio MCP targets. Remote Workspace now provides a small convenience CLI that creates a dedicated profile for the currently installed Rust companion. It uses only the installed, official tunnel-client executable and does not ask for or write API keys itself.
 
 1. Obtain the supported tunnel-client and a tunnel ID from https://platform.openai.com/settings/organization/tunnels.
 2. Provide CONTROL_PLANE_API_KEY through the runtime's secure environment or system secret storage; never paste it into ChatGPT.
-3. Run SSH Workspace commands shown below.
+3. Run Remote Workspace commands shown below.
 
-    sshworkspace tunnel init tunnel_0123456789abcdef0123456789abcdef
-    sshworkspace tunnel doctor
-    sshworkspace tunnel run
+    remoteworkspace tunnel init tunnel_0123456789abcdef0123456789abcdef
+    remoteworkspace tunnel doctor
+    remoteworkspace tunnel run
 
 The last command intentionally runs in the foreground. Tunnel credentials and authorization remain managed by OpenAI's official client. The local gateway still initiates every SSH connection. This private tunnel option does not meet the stable public endpoint requirement for a publicly published remote-MCP plugin.
 
 ## Self-contained desktop installation
 
-After downloading and approving the appropriate native executable, run sshworkspace install --user once. It copies itself atomically to a per-user private application directory without root/admin privileges or third-party dependencies. The command does not silently modify your PATH or install a browser extension. Run sshworkspace register-chrome EXTENSION_ID only after the browser extension has been approved. OS signing and production auto-update remain pending.
+After downloading and approving the appropriate native executable, run remoteworkspace install --user once. It copies itself atomically to a per-user private application directory without root/admin privileges or third-party dependencies. The command does not silently modify your PATH or install a browser extension. Run remoteworkspace register-chrome EXTENSION_ID only after the browser extension has been approved. OS signing and production auto-update remain pending.
 
 ## Encrypted host vault and backups
 
@@ -95,14 +95,14 @@ New companion installations store authorized host records in `hosts.vault`, encr
 
 Commands:
 
-    sshworkspace setup
-    sshworkspace vault status
-    sshworkspace vault migrate
-    sshworkspace backup configure local ~/sshworkspace-backups
-    sshworkspace backup configure cloud-sync ~/MyCloudSync/sshworkspace-backups
-    sshworkspace backup run "before router upgrade"
-    sshworkspace backup status
-    sshworkspace backup restore ~/sshworkspace-backups/sshworkspace-example.vault --confirm
+    remoteworkspace setup
+    remoteworkspace vault status
+    remoteworkspace vault migrate
+    remoteworkspace backup configure local ~/remoteworkspace-backups
+    remoteworkspace backup configure cloud-sync ~/MyCloudSync/remoteworkspace-backups
+    remoteworkspace backup run "before router upgrade"
+    remoteworkspace backup status
+    remoteworkspace backup restore ~/remoteworkspace-backups/remoteworkspace-example.vault --confirm
 
 The cloud-sync option writes **ciphertext only** to a folder that the user already synchronizes with their chosen cloud provider. It is **not** a native Google Drive/OneDrive/S3 API integration and cannot verify cloud synchronization or cloud-server durability. The local `vault.key` is *never* included in these backup archives. Recovery on a replacement device requires separately preserving that key securely; a passphrase-wrapped recovery workflow is a future requirement. Previously exported plaintext `hosts.json` requires explicit `vault migrate`; the original remains until the owner verifies and removes it. The companion does not delete legacy data silently. The secure vault is device-local; the central SSH gateway remains optional.
 
