@@ -1,5 +1,13 @@
 # SSH Workspace
 
+**Native companion v0.6.0 development:** The project now includes a Rust SSH/MCP companion in [companion/](companion/README.md), with local gateway selected by default and a central HTTPS gateway as an optional setting. The [GitHub Actions workflow](.github/workflows/companion-build.yml) is configured to compile reviewable desktop binaries; successful CI artifacts are **not yet signed installers**. Browser, Android and iOS native installation and hosted-ChatGPT tunnel integration are documented as pending.
+
+The legacy Python local-desktop implementation and its encrypted vault are preserved below; its manifest currently remains version 0.3.2 until the native companion is fully integrated into the plugin packaging and tested.
+
+---
+
+# SSH Workspace
+
 SSH Workspace is a local plugin for ChatGPT and Codex. Its MCP server runs over standard input and output on the machine running the local plugin. The same machine opens the SSH TCP connections, using its own network routes and source interfaces. A plugin installed on a desktop does not use a Samsung phone's loopback or VPN. To reach Termux from that desktop, save the phone address that the desktop can reach.
 
 ## Local setup
