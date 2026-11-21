@@ -17,7 +17,7 @@ class PackagingTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root / "LICENSE").write_text("MIT License\\n")
         (self.root / "NOTICE").write_text("SSH Workspace\\n")
-        for skill in ("ssh-client", "device-inventory", "vendor-mikrotik",
+        for skill in ("remote-safety", "remote-workspace", "ssh-client", "device-inventory", "vendor-mikrotik",
                       "vendor-cisco", "vendor-juniper", "vendor-huawei",
                       "vendor-zte", "telnet-legacy"):
             target = self.root / "skills" / skill / "SKILL.md"
