@@ -1,8 +1,8 @@
 {
  "manifest_version":3,
- "name":"SSH Workspace Companion Detection",
+ "name":"Remote Workspace Companion Detection",
  "version":"0.6.0",
- "description":"Detect a locally installed SSH Workspace companion without exposing SSH commands to webpages.",
+ "description":"Detect a locally installed Remote Workspace companion without exposing SSH commands to webpages.",
  "permissions":["nativeMessaging"],
- "action":{"default_title":"SSH Workspace","default_popup":"popup.html"}
+ "action":{"default_title":"Remote Workspace","default_popup":"popup.html"}
 }
