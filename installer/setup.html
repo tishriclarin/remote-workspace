@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SSH Workspace — Companion Setup</title>
+<title>Remote Workspace — Companion Setup</title>
 <style>
 :root{color-scheme:dark;background:#0e1b27;color:#f4f9fb;font-family:system-ui,sans-serif}
 body{max-width:920px;margin:40px auto;padding:0 20px}
@@ -14,7 +14,7 @@ a{color:#79d8fb}
 small{color:#adbfca} textarea{width:100%;min-height:300px;box-sizing:border-box;background:#0a131c;color:#f4f9fb;border:1px solid #345064;border-radius:8px;padding:14px;font:13px/1.5 ui-monospace,monospace} select{background:#0a131c;color:#fff;padding:10px;border:1px solid #345064;border-radius:6px} .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px} .toolbar button{padding:10px 14px} #doc-status{min-height:24px}
 </style></head>
 <body>
-<h1>SSH Workspace</h1>
+<h1>Remote Workspace</h1>
 <p>Native SSH companion setup · local gateway by default · centralized gateway optional</p>
 <div class="panel">
   <h2>Detected platform</h2>
@@ -45,10 +45,10 @@ small{color:#adbfca} textarea{width:100%;min-height:300px;box-sizing:border-box;
 <textarea id="doc-editor" spellcheck="false" aria-label="Documentation file editor"></textarea>
 </section>
 <h2>After installation</h2>
-<p>Run <code>sshworkspace setup</code> once, then register the binary as a local stdio MCP server where that connection type is supported. To switch gateway modes, use <code>sshworkspace gateway client</code> or <code>sshworkspace gateway central HTTPS_URL</code>.</p>
+<p>Run <code>remoteworkspace setup</code> once, then register the binary as a local stdio MCP server where that connection type is supported. To switch gateway modes, use <code>remoteworkspace gateway client</code> or <code>remoteworkspace gateway central HTTPS_URL</code>.</p>
 <h2>Security requirements</h2>
 <p>OS and browser authorization is mandatory. This page never executes downloads or remote commands silently. Only verified, publisher-signed installers should be offered as production one-click packages; development artifacts are unsigned.</p>
-<p><a href="https://github.com/tishriclarin/ssh-workspace">Project repository</a></p>
+<p><a href="https://github.com/tishriclarin/remote-workspace">Project repository</a></p>
 <script src="setup.js"></script>
 <script src="docs.js"></script>
 </body></html>
