@@ -1,0 +1,21 @@
+name: Rust MCP Gateway
+on:
+  push:
+    branches: [main]
+    paths: ['gateway/**', '.github/workflows/gateway-build.yml']
+  pull_request:
+    paths: ['gateway/**', '.github/workflows/gateway-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --locked
+      - run: cargo build --release --locked
