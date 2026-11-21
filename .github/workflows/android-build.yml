@@ -33,6 +33,20 @@ jobs:
         env:
           OPENSSL_STATIC: '1'
         run: cargo ndk -t arm64-v8a -p 28 build --release --locked
+      - name: Verify Android ELF target and dynamic linker
+        shell: bash
+        run: |
+          set -euo pipefail
+          BIN=companion/target/aarch64-linux-android/release/remoteworkspace
+          file "$BIN"
+          readelf -h "$BIN" | grep -Eq 'Machine:.*AArch64'
+          if readelf -l "$BIN" | grep -q 'Requesting program interpreter'; then
+            readelf -l "$BIN" | grep -F '/system/bin/linker64'
+          fi
+          if readelf -d "$BIN" | grep -Eq 'NEEDED.*(libc\\.so\\.6|libpthread\\.so\\.0|libdl\\.so\\.2)'; then
+            echo 'ERROR: Linux glibc dependency detected in Android executable' >&2
+            exit 1
+          fi
       - name: Package Android executable and checksum
         shell: bash
         run: |
