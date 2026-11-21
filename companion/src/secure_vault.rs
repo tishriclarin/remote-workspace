@@ -6,6 +6,8 @@ use chacha20poly1305::{
     Key, XChaCha20Poly1305, XNonce,
 };
 use chrono::{Local, Utc};
+use argon2::{Algorithm, Argon2, Params, Version};
+use zeroize::Zeroizing;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
@@ -81,6 +83,10 @@ fn encrypt(root: &Path, plaintext: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn decrypt(root: &Path, payload: &[u8]) -> Result<Vec<u8>> {
+    let key = load_key(root)?;
+    decrypt_with_key(&key, payload)
+}
+fn decrypt_with_key(key: &[u8; KEY_LEN], payload: &[u8]) -> Result<Vec<u8>> {
     if payload.len() < MAGIC.len() + NONCE_LEN + 16
         || !payload.starts_with(MAGIC) {
         return Err("Invalid encrypted vault format".into());
@@ -88,8 +94,7 @@ fn decrypt(root: &Path, payload: &[u8]) -> Result<Vec<u8>> {
     if payload.len() as u64 > MAX_VAULT_SIZE + 1024 {
         return Err("Encrypted vault exceeds size limit".into());
     }
-    let key = load_key(root)?;
-    let cipher = XChaCha20Poly1305::new(Key::from_slice(&key));
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(key));
     cipher.decrypt(
         XNonce::from_slice(&payload[MAGIC.len()..MAGIC.len() + NONCE_LEN]),
         &payload[MAGIC.len() + NONCE_LEN..]
@@ -243,6 +248,143 @@ pub fn restore(root: &Path, backup_file: &Path) -> Result<()> {
     atomic_private_file(&vault_path(root), &ciphertext)
 }
 
+
+const RECOVERY_MAGIC: &[u8] = b"SSHWSRCV1";
+const RECOVERY_SALT_LEN: usize = 16;
+const RECOVERY_MIN_PASSWORD_CHARS: usize = 16;
+const RECOVERY_MAX_BYTES: u64 = 4096;
+
+fn recovery_derived_key(passphrase: &str, salt: &[u8; RECOVERY_SALT_LEN]) -> Result<Zeroizing<[u8; KEY_LEN]>> {
+    if passphrase.chars().count() < RECOVERY_MIN_PASSWORD_CHARS || passphrase.len() > 1024 {
+        return Err("Recovery passphrase must contain 16-1024 characters".into());
+    }
+    let params = Params::new(65536, 3, 1, Some(32))
+        .map_err(|_| "Cannot initialize recovery key derivation")?;
+    let mut derived = Zeroizing::new([0u8; KEY_LEN]);
+    let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    argon.hash_password_into(passphrase.as_bytes(), salt, &mut derived[..])
+        .map_err(|_| "Recovery key derivation failed")?;
+    Ok(derived)
+}
+
+/// Export a password-protected copy of the device vault key. This file is not
+/// automatically included in cloud backups and never contains the host inventory.
+pub fn recovery_export(root: &Path, destination: &Path, passphrase: &str) -> Result<()> {
+    let _ = read(root)?.ok_or("Initialize the vault first")?;
+    if destination.extension().and_then(|x| x.to_str()) != Some("sshwskey") {
+        return Err("Recovery key file must end in .sshwskey".into());
+    }
+    if destination.is_symlink() || destination.exists() {
+        return Err("Refusing to overwrite or follow an existing recovery key path".into());
+    }
+    let salt: [u8; RECOVERY_SALT_LEN] = {
+        let mut value = [0u8; RECOVERY_SALT_LEN];
+        OsRng.fill_bytes(&mut value);
+        value
+    };
+    let wrapping_key = recovery_derived_key(passphrase, &salt)?;
+    let local_key = Zeroizing::new(load_key(root)?);
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&wrapping_key));
+    let nonce = XChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let ciphertext = cipher.encrypt(&nonce, &local_key[..])
+        .map_err(|_| "Recovery encryption failed")?;
+    let mut data = Vec::with_capacity(RECOVERY_MAGIC.len()+RECOVERY_SALT_LEN+NONCE_LEN+ciphertext.len());
+    data.extend_from_slice(RECOVERY_MAGIC);
+    data.extend_from_slice(&salt);
+    data.extend_from_slice(&nonce);
+    data.extend_from_slice(&ciphertext);
+    let directory = destination.parent().ok_or("Recovery path needs a parent directory")?;
+    if !directory.is_dir() {
+        return Err("Recovery destination directory does not exist".into());
+    }
+    let mut options = OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)] {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(destination).map_err(|e| e.to_string())?;
+    if let Err(error) = file.write_all(&data).and_then(|_| file.sync_all()) {
+        let _ = fs::remove_file(destination);
+        return Err(format!("Cannot persist protected recovery key: {error}"));
+    }
+    Ok(())
+}
+
+fn open_recovery_key(file: &Path, passphrase: &str) -> Result<Zeroizing<[u8; KEY_LEN]>> {
+    if file.is_symlink() || !file.is_file() {
+        return Err("Recovery file must be a regular file".into());
+    }
+    let len = fs::metadata(file).map_err(|e|e.to_string())?.len();
+    if len > RECOVERY_MAX_BYTES { return Err("Recovery key envelope is too large".into()); }
+    let raw = fs::read(file).map_err(|e|e.to_string())?;
+    let prefix = RECOVERY_MAGIC.len();
+    if !raw.starts_with(RECOVERY_MAGIC) ||
+       raw.len() != prefix + RECOVERY_SALT_LEN + NONCE_LEN + KEY_LEN + 16 {
+        return Err("Unknown or corrupted recovery key envelope".into());
+    }
+    let salt: [u8; RECOVERY_SALT_LEN] = raw[prefix..prefix+RECOVERY_SALT_LEN]
+        .try_into().map_err(|_| "Invalid recovery salt")?;
+    let derived = recovery_derived_key(passphrase, &salt)?;
+    let cipher = XChaCha20Poly1305::new(Key::from_slice(&derived));
+    let start = prefix + RECOVERY_SALT_LEN;
+    let nonce = XNonce::from_slice(&raw[start..start+NONCE_LEN]);
+    let decrypted = cipher.decrypt(nonce, &raw[start+NONCE_LEN..])
+        .map_err(|_| "Invalid recovery passphrase or tampered envelope")?;
+    if decrypted.len() != KEY_LEN { return Err("Invalid recovered key length".into()); }
+    let mut key = Zeroizing::new([0u8; KEY_LEN]);
+    key.copy_from_slice(&decrypted);
+    Ok(key)
+}
+
+/// Restore into a clean SSHWORKSPACE_HOME only. Never replace a live vault
+/// key or silently lose existing host profiles on a different device.
+pub fn recovery_import_fresh(root: &Path, recovery_file: &Path,
+                              backup_file: &Path, passphrase: &str) -> Result<()> {
+    if root.join("vault.key").exists() || root.join("vault.key").is_symlink() ||
+       root.join("hosts.vault").exists() || root.join("hosts.vault").is_symlink() ||
+       root.join("hosts.json").exists() || root.join("hosts.json").is_symlink() {
+        return Err("Recovery requires an empty vault directory; existing data will not be overwritten".into());
+    }
+    if backup_file.is_symlink() || !backup_file.is_file() ||
+       backup_file.extension().and_then(|x|x.to_str()) != Some("vault") {
+        return Err("Choose a regular encrypted .vault backup".into());
+    }
+    if fs::metadata(backup_file).map_err(|e|e.to_string())?.len() > MAX_VAULT_SIZE + 1024 {
+        return Err("Encrypted backup exceeds size limit".into());
+    }
+    let key = open_recovery_key(recovery_file, passphrase)?;
+    let backup = fs::read(backup_file).map_err(|e|e.to_string())?;
+    let plaintext = decrypt_with_key(&key, &backup)?;
+    let hosts: Vec<Value> = serde_json::from_slice(&plaintext)
+        .map_err(|_| "Backup does not contain a host inventory")?;
+    for host in hosts {
+        if !host.get("alias").and_then(Value::as_str).is_some() ||
+           !host.get("address").and_then(Value::as_str).is_some() ||
+           !host.get("username").and_then(Value::as_str).is_some() {
+            return Err("Backup contains invalid host profile".into());
+        }
+    }
+    owner_dir(root)?;
+    let key_file = root.join("vault.key");
+    let mut opts = OpenOptions::new();
+    opts.write(true).create_new(true);
+    #[cfg(unix)] {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut f = opts.open(&key_file).map_err(|e|e.to_string())?;
+    if let Err(e) = f.write_all(&key[..]).and_then(|_| f.sync_all()) {
+        let _ = fs::remove_file(&key_file);
+        return Err(format!("Could not persist recovered key: {e}"));
+    }
+    if let Err(error) = atomic_private_file(&vault_path(root), &backup) {
+        let _ = fs::remove_file(&key_file);
+        return Err(error);
+    }
+    Ok(())
+}
+
 pub fn status(root: &Path) -> Value {
     json!({
         "encrypted_inventory_present": vault_path(root).is_file(),
@@ -289,6 +431,41 @@ mod tests {
         write(root.path(), b"[]").unwrap();
         restore(root.path(), &storage.path().join(filename)).unwrap();
         assert_eq!(read(root.path()).unwrap().unwrap(), br#"[{"alias":"first"}]"#);
+    }
+
+
+    #[test]
+    fn portable_recovery_from_separate_key_and_backup() {
+        let old = tempdir().unwrap();
+        let new = tempdir().unwrap();
+        let files = tempdir().unwrap();
+        initialize(old.path()).unwrap();
+        write(old.path(), br#"[{"alias":"router","address":"192.0.2.10","username":"operator"}]"#).unwrap();
+        let receipt = backup(old.path(),files.path(),"Before migrating device","cloud-sync").unwrap();
+        let archive = files.path().join(receipt["backup_name"].as_str().unwrap());
+        let recovery_file = files.path().join("offline-recovery.sshwskey");
+        recovery_export(old.path(),&recovery_file,"very-long-unique-recovery-passphrase").unwrap();
+        assert!(recovery_import_fresh(new.path(),&recovery_file,&archive,"wrong-passphrase-long").is_err());
+        assert!(!new.path().join("vault.key").exists());
+        recovery_import_fresh(new.path(),&recovery_file,&archive,"very-long-unique-recovery-passphrase").unwrap();
+        assert_eq!(read(new.path()).unwrap().unwrap(),read(old.path()).unwrap().unwrap());
+        assert!(recovery_import_fresh(new.path(),&recovery_file,&archive,"very-long-unique-recovery-passphrase").is_err());
+    }
+
+    #[test]
+    fn recovery_envelope_integrity_is_enforced() {
+        let root = tempdir().unwrap();
+        let dest = tempdir().unwrap();
+        initialize(root.path()).unwrap();
+        let path = dest.path().join("offline.sshwskey");
+        recovery_export(root.path(),&path,"a-unique-recovery-password-123").unwrap();
+        let mut raw = fs::read(&path).unwrap();
+        let last = raw.len() - 1;
+        raw[last] ^= 1;
+        fs::write(&path,raw).unwrap();
+        let backup = dest.path().join("sample.vault");
+        fs::copy(root.path().join("hosts.vault"),&backup).unwrap();
+        assert!(recovery_import_fresh(dest.path().join("fresh").as_path(),&path,&backup,"a-unique-recovery-password-123").is_err());
     }
 
     #[test]

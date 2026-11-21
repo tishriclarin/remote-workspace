@@ -542,6 +542,29 @@ fn vault_command(args: &[String]) -> AppResult<()> {
                 .map_err(|e|e.to_string())?);
             Ok(())
         },
+
+        Some("recovery-export") if args.len() == 4 => {
+            let pass = zeroize::Zeroizing::new(
+                rpassword::prompt_password("Recovery passphrase (16+ characters, keep offline): ")
+                    .map_err(|_| "Cannot read recovery passphrase from terminal")?);
+            let again = zeroize::Zeroizing::new(
+                rpassword::prompt_password("Confirm recovery passphrase: ")
+                    .map_err(|_| "Cannot read passphrase confirmation")?);
+            if *pass != *again { return Err("Recovery passphrases did not match".into()); }
+            secure_vault::recovery_export(&data_dir(), &expand_home(&args[3]), &pass)?;
+            println!("Passphrase-protected recovery key exported. Keep it separate from synced backup files.");
+            Ok(())
+        },
+        Some("recovery-import") if args.len() == 6 && args[5] == "--confirm" => {
+            let pass = zeroize::Zeroizing::new(
+                rpassword::prompt_password("Recovery passphrase: ")
+                    .map_err(|_| "Cannot read recovery passphrase from terminal")?);
+            secure_vault::recovery_import_fresh(&data_dir(), &expand_home(&args[3]),
+                                                &expand_home(&args[4]), &pass)?;
+            for host in read_hosts()? { validate_host(&host)?; }
+            println!("Encrypted host inventory restored into a new local vault.");
+            Ok(())
+        },
         Some("migrate") if args.len() == 3 => {
             let old = data_dir().join("hosts.json");
             let data = fs::read(&old).map_err(|_| "No legacy hosts.json available")?;
@@ -684,6 +707,8 @@ fn run() -> AppResult<()> {
             println!("  gateway client | central HTTPS_URL");
             println!("  host add ALIAS ADDRESS USERNAME [PORT] [IDENTITY_FILE]");
             println!("  vault status | migrate  Encrypted device host inventory");
+            println!("  vault recovery-export FILE.sshwskey");
+            println!("  vault recovery-import KEY.sshwskey BACKUP.vault --confirm");
             println!("  backup status | configure local|cloud-sync DIR | run DESCRIPTION");
             println!("  backup restore FILE --confirm");
             println!("  mcp            Run local stdio MCP server");
