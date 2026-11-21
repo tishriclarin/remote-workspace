@@ -33,9 +33,11 @@ class PackagingTests(unittest.TestCase):
             conf = json.loads(zipf.read(".mcp.json"))
             info = json.loads(zipf.read("BUILD-INFO.json"))
             self.assertEqual(manifest["version"], "0.7.0")
-            self.assertEqual(conf["mcp_servers"]["ssh-workspace"]["command"],
+            self.assertEqual(conf["mcpServers"]["ssh-workspace"]["command"],
                              "$" + "{PLUGIN_ROOT}/bin/sshworkspace")
             self.assertTrue(manifest["requires_local_executor"])
+            self.assertEqual(manifest["mcpServers"], "./.mcp.json")
+            self.assertEqual(conf["mcpServers"]["ssh-workspace"]["args"], ["mcp"])
             self.assertFalse(info["signed"])
             self.assertTrue(zipf.getinfo("bin/sshworkspace").external_attr >> 16 & 0o111)
 

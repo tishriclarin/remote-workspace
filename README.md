@@ -2,7 +2,7 @@
 
 ## Native SSH Workspace v0.7.0 (development)
 
-SSH Workspace is a **local-first MCP/SSH companion**. The user's own device connects to authorized SSH hosts. A **centralized SSH gateway is optional** in settings. Public ChatGPT access to a local companion needs a separately authorized relay/tunnel; the companion does not make a central SSH server mandatory.
+SSH Workspace is a **local-first MCP/SSH companion**. The user's own device connects to authorized SSH hosts. A **centralized SSH gateway is optional** in settings. **The default ChatGPT desktop local-MCP path reuses the existing ChatGPT session and host-managed MCP tool channel**; it requires neither a second sign-in nor an API key nor a remote tunnel. If an ordinary web/mobile session does not expose a documented local MCP channel, a separately approved transport is required; a secure chat session alone cannot invoke native device code.
 
 The Rust engine lives in [companion/](companion/). The [native build workflow](.github/workflows/companion-build.yml) compiles and tests Windows x64, Linux x64/ARM64 and macOS Intel/Apple Silicon. It packages a platform-specific desktop-only plugin ZIP containing the compiled Rust MCP server. Artifacts are **unsigned development builds**, not published OS installers.
 
@@ -22,7 +22,7 @@ The first run creates a private per-user configuration. Before using SSH, indepe
 
 ### Secure MCP Tunnel for private testing
 
-To reach a local companion from hosted ChatGPT without a publicly exposed SSH or MCP server, use the supported **OpenAI Secure MCP Tunnel client**. After obtaining a tunnel ID and runtime API key from the official management portal, install the official tunnel-client and run:
+For **optional** private web/mobile testing when no host-managed local MCP executor is available, use the official **OpenAI Secure MCP Tunnel client**. This is not required for supported desktop local threads. After obtaining a tunnel ID and runtime API key from the official management portal, install the official tunnel-client and run:
 
     sshworkspace tunnel init tunnel_0123456789abcdef0123456789abcdef
     sshworkspace tunnel doctor

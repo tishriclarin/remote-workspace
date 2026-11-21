@@ -2,6 +2,14 @@
 
 This directory introduces a **native Rust SSH + MCP engine** alongside the existing Python desktop plugin. Local-first means the device running the companion initiates SSH and holds authentication material. The centralized HTTPS MCP gateway remains an **optional** setting. The companion is not a centralized SSH proxy.
 
+## Connection routing: reuse the existing ChatGPT session by default
+
+**Local mode is host-managed.** When a supported ChatGPT desktop/local thread exposes a local MCP executor, ChatGPT invokes the bundled Rust companion as an MCP tool over stdio. This reuses the host's normal authenticated ChatGPT session and authorized MCP routing; it does **not** require an OpenAI API key, a second sign-in, a public HTTP server or an MCP tunnel. SSH commands originate on the user's device and return as normal tool results.
+
+**Transport boundary:** ChatGPT's normal HTTPS connection is secure, but its chat transport cannot be intercepted or turned into an arbitrary native command channel. Only use the host's documented MCP tool invocation capabilities. If a web or mobile ChatGPT client does not expose a local MCP execution channel, the plugin cannot silently reuse its chat socket to reach the user's companion. In such environments, show an explicit unsupported state or offer user-approved remote/tunnel transport. Never pretend that merely being signed into ChatGPT authorizes arbitrary device operations.
+
+A centralized SSH gateway is always optional. Secure MCP Tunnel is an opt-in fallback for supported private workflows and not part of the local desktop default. Store SSH secrets locally and enforce local per-host authorization and safe/read-only behavior irrespective of ChatGPT authentication.
+
 ## Current implementation
 
 - Self-contained Rust CLI/MCP executable using an embedded libssh2 SSH engine. No external OpenSSH or Python runtime required for these new diagnostic tools.
@@ -41,7 +49,7 @@ Central mode records the HTTPS endpoint but **does not implement transparent rem
 
 Desktop users can download a verified binary artifact once the GitHub Actions build succeeds, then approve its execution/installation. A future signed installer can register local MCP and browser native messaging on the user's behalf where OS and browser rules permit. We do not silently install browser extensions, native applications or mobile apps.
 
-**ChatGPT browser and native mobile restrictions:** Web ChatGPT cannot automatically attach to a binary running on its user's computer or phone. A supported secure MCP tunnel or paired relay is still necessary. A full browser extension with native-host registration, signed Android application, signed iOS application, and production tunnel integration are **not shipped** here. Browser-native SSH is not a generally available API.
+**ChatGPT browser and native mobile restrictions:** Web ChatGPT cannot automatically attach to a binary running on its user's computer or phone. Local execution through the current ChatGPT session is possible only when the host explicitly supports that MCP capability; otherwise a separate user-approved transport is required. A full browser extension with native-host registration, signed Android application, signed iOS application, and production tunnel integration are **not shipped** here. Browser-native SSH is not a generally available API.
 
 The native companion is designed to support these later integrations without moving SSH private keys to a central service.
 

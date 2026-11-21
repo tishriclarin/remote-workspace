@@ -26,7 +26,7 @@ class ArchiveRuntimeTest(unittest.TestCase):
             with tempfile.TemporaryDirectory() as work:
                 folder = Path(work)
                 archive.extractall(folder)
-                command = mcp["mcp_servers"]["ssh-workspace"]
+                command = mcp["mcpServers"]["ssh-workspace"]
                 prefix = "$" + "{PLUGIN_ROOT}"
                 self.assertTrue(command["command"].startswith(prefix + "/bin/"))
                 relative = command["command"][len(prefix) + 1:]

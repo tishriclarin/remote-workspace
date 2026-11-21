@@ -1,6 +1,6 @@
 # Native plugin distribution
 
-A desktop CI build produces a platform-specific ZIP that contains the native Rust SSH engine, local stdio MCP configuration, a plugin manifest and a read-only skill. It does not require Python or an external SSH client on the recipient machine.
+Supported ChatGPT desktop local execution uses the existing ChatGPT session and host-managed MCP tool routing. No extra login, API key, tunnel or central SSH gateway is required for that local path. Ordinary ChatGPT browser/mobile sessions cannot automatically expose the same native executor.\n\nA desktop CI build produces a platform-specific ZIP that contains the native Rust SSH engine, local stdio MCP configuration, a plugin manifest and a read-only skill. It does not require Python or an external SSH client on the recipient machine.
 
 This is an **unsigned development package**, not a signed installer. The OS and browser must approve installation and execution. The desktop-only plugin publishing path requires OpenAI approval for local MCP submissions.
 

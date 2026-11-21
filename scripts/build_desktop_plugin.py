@@ -56,7 +56,7 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         if name != "sshworkspace.exe":
             executable.chmod(0o755)
         root_placeholder = "$" + "{PLUGIN_ROOT}"
-        json_file(stage / ".mcp.json", {"mcp_servers": {
+        json_file(stage / ".mcp.json", {"mcpServers": {
             "ssh-workspace": {"command": root_placeholder + "/bin/" + name,
                               "args": ["mcp"], "cwd": root_placeholder}
         }})

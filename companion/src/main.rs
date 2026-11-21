@@ -205,6 +205,10 @@ fn gateway_status() -> AppResult<Value> {
         "architecture": env::consts::ARCH,
         "config_directory": data_dir().display().to_string(),
         "transport": "local_stdio",
+        "connection_route": "host_managed_local_mcp",
+        "requires_additional_openai_api_key": false,
+        "requires_tunnel_for_local_host_execution": false,
+        "requires_supported_local_mcp_host": true,
         "remote_tunnel_connected": null
     }))
 }
@@ -216,6 +220,9 @@ fn installation_guidance() -> Value {
         "instructions": "Choose a verified build matching your OS and CPU, approve the installer, then configure the native MCP companion. Browser extensions and mobile apps require their own approved installations.",
         "cannot_silently_install": true,
         "browser_mcp_tunnel_included": false,
+        "default_route": "host_managed_local_mcp",
+        "local_chatgpt_requires_additional_pairing": false,
+        "web_mobile_without_local_mcp_host": "not_supported_without_explicit_connection",
         "supported_tunnel_client": "https://platform.openai.com/settings/organization/tunnels",
         "android_app_included": false,
         "ios_app_included": false
