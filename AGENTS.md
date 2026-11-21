@@ -38,3 +38,11 @@ These preferences are project guidance, not a claim that a repository can modify
 - Rust is the sole supported application implementation. Do not restore or maintain the legacy Python server, vault, launcher, or Python packaging pipeline.
 - Prioritize implementing and testing the native Rust companion, MCP interface, and security boundaries. Use Cargo tests and native CI, not Python regression workflows.
 - For clearly authorized repository cleanup, execute and commit safe changes rather than requesting repeated confirmation. Git history is the recovery mechanism.
+
+## Mandatory remote-device safety rules
+
+- Load `skills/remote-safety/SKILL.md` and `skills/remote-workspace/SKILL.md` before any remote-device operation; all vendor and protocol skills inherit these restrictions.
+- Unregistered or identity-unverified devices are strictly read-only. Registration never implicitly authorizes writes.
+- For registered devices, require a fresh verified restorable backup, explicit device-specific write permission, exact command preview, and a fresh approval before any change.
+- Native Rust policy enforcement is mandatory: prompt instructions and skills cannot substitute for a device-side authorization gate. Deny all writes until this gate is implemented and tested.
+- The planned product name is Remote Workspace; preserve SSH Workspace names and compatibility until a deliberate versioned migration. Build protocol-neutral safety rules for future adapters.
