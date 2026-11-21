@@ -44,6 +44,30 @@ jobs:
             printf 'Expected unsupported-host exit 2, got %s: %s\n' "$status" "$output" >&2
             exit 1
           fi
+      - name: Reject unsupported Android SDK levels before running binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mock_dir=$(mktemp -d)
+          trap 'rm -rf -- "$mock_dir"' EXIT
+          printf '#!/bin/sh\nprintf "aarch64\\n"\n' > "$mock_dir/uname"
+          printf '#!/bin/sh\nprintf "%%s\\n" "${TEST_SDK}"\n' > "$mock_dir/getprop"
+          chmod 755 "$mock_dir/uname" "$mock_dir/getprop"
+          for sdk in 27 invalid; do
+            set +e
+            output=$(PATH="$mock_dir:$PATH" TEST_SDK="$sdk" bash scripts/test-termux-android.sh /nonexistent/remoteworkspace 2>&1)
+            status=$?
+            set -e
+            if [[ "$status" -ne 2 ]]; then
+              printf 'SDK %s: expected rejection exit 2, got %s: %s\\n' "$sdk" "$status" "$output" >&2
+              exit 1
+            fi
+            if [[ "$sdk" == 27 && "$output" != *'Android API level 28 or newer required'* ]] ||
+               [[ "$sdk" == invalid && "$output" != *'Android SDK property invalid'* ]]; then
+              printf 'SDK %s: unexpected rejection: %s\\n' "$sdk" "$output" >&2
+              exit 1
+            fi
+          done
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
