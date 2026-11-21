@@ -1,4 +1,4 @@
-# SSH Workspace
+# Remote Workspace
 
 Rust-only, local-first SSH companion and MCP tool provider for an existing ChatGPT/Codex session.
 
@@ -36,15 +36,15 @@ Use the Rust workspace under `companion/` and run its Cargo tests. The native CI
 ## Planned native commands
 
 ```sh
-sshworkspace setup
-sshworkspace install --user
-sshworkspace host add lab 192.0.2.10 operator 22 /absolute/path/to/ssh-key
-sshworkspace doctor
-sshworkspace mcp
+remoteworkspace setup
+remoteworkspace install --user
+remoteworkspace host add lab 192.0.2.10 operator 22 /absolute/path/to/ssh-key
+remoteworkspace doctor
+remoteworkspace mcp
 ```
 
 Before connecting to a host, verify and pin its public SSH host key independently.
 
 ## Tracking
 
-[Signing](https://github.com/tishriclarin/ssh-workspace/issues/1) · [Pairing/relay](https://github.com/tishriclarin/ssh-workspace/issues/2) · [Android](https://github.com/tishriclarin/ssh-workspace/issues/3) · [iOS](https://github.com/tishriclarin/ssh-workspace/issues/4) · [Permission-controlled operations](https://github.com/tishriclarin/ssh-workspace/issues/5)
+[Signing](https://github.com/tishriclarin/remote-workspace/issues/1) · [Pairing/relay](https://github.com/tishriclarin/remote-workspace/issues/2) · [Android](https://github.com/tishriclarin/remote-workspace/issues/3) · [iOS](https://github.com/tishriclarin/remote-workspace/issues/4) · [Permission-controlled operations](https://github.com/tishriclarin/remote-workspace/issues/5)
