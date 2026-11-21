@@ -123,6 +123,17 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
             "# SSH Workspace\nLoad remote-safety and remote-workspace skills before any remote action.\nUse only saved host aliases. Never ask for credentials in chat.\n"
             "Only fixed read-only diagnostics are available. Do not claim arbitrary shell access.\n"
             "Never disable strict SSH host-key checks.\n", encoding="utf-8")
+        # Make the policy and operator documentation visible in each packaged plugin.
+        documentation = (
+            "AGENTS.md", "docs/DEVICE_POLICY.md", "gateway/README.md"
+        )
+        for relative in documentation:
+            source = root / relative
+            if not source.is_file():
+                raise ValueError("Missing required documentation: " + relative)
+            destination = stage / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
         for legal in ("LICENSE", "NOTICE"):
             if (root / legal).is_file():
                 shutil.copy2(root / legal, stage / legal)
