@@ -1,6 +1,6 @@
 "use strict";
 (() => {
-  const repository = "tishriclarin/ssh-workspace";
+  const repository = "tishriclarin/remote-workspace";
   const allowed = new Set([
     "README.md", "AGENTS.md", "docs/DEVICE_POLICY.md",
     "skills/remote-safety/SKILL.md", "skills/remote-workspace/SKILL.md",
