@@ -19,8 +19,9 @@ if [[ ! -f "$BIN" || ! -x "$BIN" ]]; then
 fi
 
 "$BIN" doctor
-REPORT="${TMPDIR:-${HOME}/.cache}/remote-workspace-mcp-test.jsonl"
-mkdir -p "$(dirname "$REPORT")"
+# Avoid predictable output paths and symlink clobbering; clean up after testing.
+REPORT=$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/remote-workspace-mcp.XXXXXXXX")
+trap 'rm -f -- "$REPORT"' EXIT
 printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"termux-smoke-test","version":"1"}}}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
@@ -43,4 +44,3 @@ if ! grep -q '"id":3' "$REPORT" || ! grep -Eq '"isError":[[:space:]]*true|"code"
   exit 1
 fi
 echo 'PASS: prebuilt Android binary initialized MCP and rejected unsafe write'
-echo "Report: $REPORT"
