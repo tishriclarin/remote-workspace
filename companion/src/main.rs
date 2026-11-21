@@ -748,6 +748,29 @@ mod tests {
         for alias in ["", "../etc/passwd", "bad alias", "a/b", "x\n"] { assert!(!valid_alias(alias)); }
     }
     #[test]
+    fn host_validation_rejects_telnet_and_unapproved_vendor() {
+        let mut host = Host {
+            alias: "router_1".into(),
+            address: "192.0.2.1".into(),
+            username: "operator".into(),
+            port: 22,
+            identity_file: None,
+            known_hosts_file: None,
+            certificate_file: None,
+            vendor: Some("mikrotik".into()),
+            protocol: Some("ssh".into()),
+        };
+        assert!(validate_host(&host).is_ok());
+        host.protocol = Some("telnet".into());
+        assert!(validate_host(&host).is_err());
+        host.protocol = Some("ssh".into());
+        host.vendor = Some("unknown-vendor".into());
+        assert!(validate_host(&host).is_err());
+        host.vendor = Some("mikrotik".into());
+        host.port = 0;
+        assert!(validate_host(&host).is_err());
+    }
+    #[test]
     fn backup_defaults_local_without_destination() {
         let default = Settings::default();
         assert_eq!(default.backup.mode, BackupMode::Local);
