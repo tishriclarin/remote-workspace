@@ -82,7 +82,7 @@ async fn mcp(State(config): State<Arc<Config>>, headers: HeaderMap, Json(request
         "initialize" => json!({"jsonrpc":"2.0","id":id,"result":{
             "protocolVersion":"2025-03-26",
             "capabilities":{"tools":{"listChanged":false}},
-            "serverInfo":{"name":"sshworkspace-gateway","version":"0.2.0"}
+            "serverInfo":{"name":"remoteworkspace-gateway","version":"0.2.0"}
         }}),
         "ping" => json!({"jsonrpc":"2.0","id":id,"result":{}}),
         "tools/list" => json!({"jsonrpc":"2.0","id":id,"result":{"tools":[
@@ -110,13 +110,13 @@ async fn mcp(State(config): State<Arc<Config>>, headers: HeaderMap, Json(request
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let token = env::var("SSHWORKSPACE_GATEWAY_TOKEN").expect("Set SSHWORKSPACE_GATEWAY_TOKEN");
-    let device_token = env::var("SSHWORKSPACE_DEVICE_TOKEN").expect("Set SSHWORKSPACE_DEVICE_TOKEN");
+    let token = env::var("REMOTEWORKSPACE_GATEWAY_TOKEN").expect("Set REMOTEWORKSPACE_GATEWAY_TOKEN");
+    let device_token = env::var("REMOTEWORKSPACE_DEVICE_TOKEN").expect("Set REMOTEWORKSPACE_DEVICE_TOKEN");
     assert!(token.len() >= 32 && device_token.len() >= 32 && token != device_token, "Use two distinct 32+ character tokens");
-    let bind = env::var("SSHWORKSPACE_GATEWAY_BIND").unwrap_or_else(|_| "127.0.0.1:8787".into());
+    let bind = env::var("REMOTEWORKSPACE_GATEWAY_BIND").unwrap_or_else(|_| "127.0.0.1:8787".into());
     let addr: SocketAddr = bind.parse()?;
-    if !addr.ip().is_loopback() && env::var("SSHWORKSPACE_ALLOW_PLAINTEXT_REMOTE").as_deref() != Ok("1") {
-        panic!("Non-loopback bind requires TLS termination and explicit SSHWORKSPACE_ALLOW_PLAINTEXT_REMOTE=1");
+    if !addr.ip().is_loopback() && env::var("REMOTEWORKSPACE_ALLOW_PLAINTEXT_REMOTE").as_deref() != Ok("1") {
+        panic!("Non-loopback bind requires TLS termination and explicit REMOTEWORKSPACE_ALLOW_PLAINTEXT_REMOTE=1");
     }
     let config = Arc::new(Config { bearer:token, device_token, state:Mutex::new(DeviceState {queue:VecDeque::new(),pending:HashMap::new()}), counter:AtomicU64::new(1) });
     let app = Router::new().route("/healthz", get(health)).route("/mcp", post(mcp))
