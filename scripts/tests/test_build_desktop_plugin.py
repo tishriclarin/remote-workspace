@@ -15,6 +15,8 @@ class PackagingTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+        (self.root / "LICENSE").write_text("MIT License\\n")
+        (self.root / "NOTICE").write_text("SSH Workspace\\n")
         self.binary = self.root / "sshworkspace"
         self.binary.write_bytes(b"\x7fELF" + b"\0" * 2048)
 
@@ -24,7 +26,7 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(Path(str(path) + ".sha256").exists())
         with zipfile.ZipFile(path) as zipf:
             names = zipf.namelist()
-            for name in [".codex-plugin/plugin.json", ".mcp.json", "bin/sshworkspace",
+            for name in [".codex-plugin/plugin.json", ".mcp.json", "bin/sshworkspace", "LICENSE", "NOTICE",
                          "skills/ssh-workspace/SKILL.md", "BUILD-INFO.json"]:
                 self.assertIn(name, names)
             manifest = json.loads(zipf.read(".codex-plugin/plugin.json"))

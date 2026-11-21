@@ -91,6 +91,9 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
             "# SSH Workspace\nUse only saved host aliases. Never ask for credentials in chat.\n"
             "Only fixed read-only diagnostics are available. Do not claim arbitrary shell access.\n"
             "Never disable strict SSH host-key checks.\n", encoding="utf-8")
+        for legal in ("LICENSE", "NOTICE"):
+            if (root / legal).is_file():
+                shutil.copy2(root / legal, stage / legal)
         readme = root / "companion/README.md"
         if readme.is_file():
             shutil.copy2(readme, stage / "README.md")

@@ -1,0 +1,12 @@
+SSH Workspace
+Copyright (c) 2026 Visual Security Systems IT Solutions (VSS-IT).
+Developed by Visual Security Systems IT Solutions.
+
+Project source is offered under the MIT license in LICENSE.
+
+Product marks and branding identify the original publisher. Do not present
+unofficial modifications as endorsed releases.
+
+Native Rust binaries also contain third-party code. A full transitive
+dependency/license audit, appropriate license notices, and code signing are
+required before distributing a public production installer.
