@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "protocols": [
+    {
+      "id": "ssh",
+      "enabled_by_default": true,
+      "encrypted": true,
+      "implemented": true,
+      "engine": "ssh2",
+      "default_port": 22,
+      "skills": [
+        "ssh-client"
+      ],
+      "requires_host_key_verification": true
+    },
+    {
+      "id": "telnet",
+      "enabled_by_default": false,
+      "encrypted": false,
+      "implemented": false,
+      "engine": null,
+      "default_port": 23,
+      "skills": [
+        "telnet-legacy"
+      ],
+      "requires_explicit_insecure_approval": true
+    },
+    {
+      "id": "serial-console",
+      "enabled_by_default": false,
+      "encrypted": null,
+      "implemented": false,
+      "engine": null,
+      "skills": []
+    },
+    {
+      "id": "netconf",
+      "enabled_by_default": false,
+      "encrypted": true,
+      "implemented": false,
+      "engine": null,
+      "skills": []
+    },
+    {
+      "id": "restconf",
+      "enabled_by_default": false,
+      "encrypted": true,
+      "implemented": false,
+      "engine": null,
+      "skills": []
+    }
+  ]
+}

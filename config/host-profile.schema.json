@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/tishriclarin/ssh-workspace/blob/main/config/host-profile.schema.json",
+  "title": "SSH Workspace device profile v1 - planned encrypted vault schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "alias",
+    "address",
+    "port",
+    "protocol",
+    "vendor",
+    "username",
+    "auth",
+    "known_hosts_file",
+    "policy"
+  ],
+  "properties": {
+    "alias": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,64}$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "address": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253
+    },
+    "port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "protocol": {
+      "type": "string",
+      "enum": [
+        "ssh",
+        "telnet"
+      ],
+      "default": "ssh"
+    },
+    "vendor": {
+      "type": "string",
+      "enum": [
+        "linux",
+        "mikrotik",
+        "cisco",
+        "juniper",
+        "huawei",
+        "zte",
+        "other"
+      ]
+    },
+    "username": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "group": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 32,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 32
+      }
+    },
+    "known_hosts_file": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auth": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "method"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "ssh_agent"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "method",
+            "identity_file"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "identity_file"
+            },
+            "identity_file": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "method",
+            "identity_file",
+            "certificate_file"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "ssh_certificate"
+            },
+            "identity_file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "certificate_file": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "method",
+            "secret_ref"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "os_keystore"
+            },
+            "secret_ref": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 256
+            }
+          }
+        }
+      ]
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read_only",
+        "safe_mode",
+        "approval_required_for_changes"
+      ],
+      "properties": {
+        "read_only": {
+          "type": "boolean",
+          "default": true
+        },
+        "safe_mode": {
+          "type": "boolean",
+          "default": true
+        },
+        "approval_required_for_changes": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}

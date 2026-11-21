@@ -1,0 +1,23 @@
+{
+  "alias": "demo-router",
+  "label": "Demo router",
+  "address": "192.0.2.10",
+  "port": 22,
+  "protocol": "ssh",
+  "vendor": "mikrotik",
+  "username": "operator",
+  "group": "Lab",
+  "tags": [
+    "demo",
+    "router"
+  ],
+  "known_hosts_file": "~/.ssh/known_hosts",
+  "auth": {
+    "method": "ssh_agent"
+  },
+  "policy": {
+    "read_only": true,
+    "safe_mode": true,
+    "approval_required_for_changes": true
+  }
+}
