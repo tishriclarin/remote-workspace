@@ -63,6 +63,14 @@ jobs:
         env:
           SSHWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }}
         run: python ../scripts/tests/test_mcp_runtime.py
+      - name: Test real SSH key pinning against disposable local sshd
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env:
+          SSHWORKSPACE_BIN: ${{ github.workspace }}/companion/target/${{ matrix.target }}/release/sshworkspace
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y openssh-server
+          python ../scripts/tests/test_live_ssh.py
       - name: Package platform-specific desktop plugin
         run: python ../scripts/build_desktop_plugin.py --binary target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ matrix.target }} --version 0.7.0 --output dist
       - name: Upload unsigned build for review
