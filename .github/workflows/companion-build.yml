@@ -77,6 +77,10 @@ jobs:
           python ../scripts/tests/test_live_ssh.py
       - name: Package platform-specific desktop plugin
         run: python ../scripts/build_desktop_plugin.py --binary target/${{ matrix.target }}/release/sshworkspace${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ matrix.target }} --version 0.7.0 --output dist
+      - name: Validate packaged native MCP execution
+        env:
+          SSHWORKSPACE_ARCHIVES: dist
+        run: python ../scripts/tests/test_archive_runtime.py
       - name: Upload unsigned build for review
         uses: actions/upload-artifact@v4
         with:
