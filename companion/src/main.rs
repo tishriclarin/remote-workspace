@@ -205,7 +205,7 @@ fn gateway_status() -> AppResult<Value> {
         "architecture": env::consts::ARCH,
         "config_directory": data_dir().display().to_string(),
         "transport": "local_stdio",
-        "remote_tunnel_connected": false
+        "remote_tunnel_connected": null
     }))
 }
 fn installation_guidance() -> Value {
@@ -216,6 +216,7 @@ fn installation_guidance() -> Value {
         "instructions": "Choose a verified build matching your OS and CPU, approve the installer, then configure the native MCP companion. Browser extensions and mobile apps require their own approved installations.",
         "cannot_silently_install": true,
         "browser_mcp_tunnel_included": false,
+        "supported_tunnel_client": "https://platform.openai.com/settings/organization/tunnels",
         "android_app_included": false,
         "ios_app_included": false
     })
@@ -381,6 +382,50 @@ fn register_chromium_host(extension_id: &str) -> AppResult<()> {
     Ok(())
 }
 
+
+fn tunnel_id_valid(value: &str) -> bool {
+    value.starts_with("tunnel_") && value.len() >= 20 && value.len() <= 128 &&
+        value[7..].bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+fn tunnel_command() -> AppResult<String> {
+    let binary = env::current_exe().map_err(|error| error.to_string())?;
+    let raw = binary.to_string_lossy();
+    #[cfg(windows)] {
+        if raw.contains('"') { return Err("Invalid binary path".into()); }
+        Ok(format!("\"{}\" mcp", raw))
+    }
+    #[cfg(not(windows))] {
+        Ok(format!("'{}' mcp", raw.replace('\'', "'\\''")))
+    }
+}
+fn tunnel_action(args: &[String]) -> AppResult<()> {
+    use std::process::Command;
+    let profile = "ssh-workspace-local";
+    let action = args.get(2).map(String::as_str).unwrap_or("");
+    let mut cmd = Command::new("tunnel-client");
+    match action {
+        "init" => {
+            if args.len() != 4 || !tunnel_id_valid(&args[3]) {
+                return Err("Usage: sshworkspace tunnel init tunnel_<id>".into());
+            }
+            cmd.args(["init", "--sample", "sample_mcp_stdio_local", "--profile",
+                      profile, "--tunnel-id", &args[3], "--mcp-command", &tunnel_command()?]);
+        }
+        "doctor" if args.len() == 3 => {
+            cmd.args(["doctor", "--profile", profile, "--explain"]);
+        }
+        "run" if args.len() == 3 => {
+            cmd.args(["run", "--profile", profile]);
+        }
+        _ => return Err("Usage: sshworkspace tunnel init TUNNEL_ID | doctor | run".into())
+    }
+    let result = cmd.status().map_err(|_| {
+        "The official OpenAI tunnel-client is not installed. Obtain the supported binary from https://platform.openai.com/settings/organization/tunnels".to_string()
+    })?;
+    if !result.success() { return Err(format!("Official tunnel-client returned status: {result}")); }
+    Ok(())
+}
+
 fn init() -> AppResult<()> {
     let dir = data_dir();
     ensure_dir(&dir)?;
@@ -398,6 +443,7 @@ fn run() -> AppResult<()> {
         Some("native-messaging") => native_messaging(),
         Some(v) if v.starts_with("chrome-extension://") => native_messaging(),
         Some("register-chrome") => register_chromium_host(args.get(2).ok_or("Missing extension ID")?),
+        Some("tunnel") => tunnel_action(&args),
         Some("setup") => init(),
         Some("doctor") | Some("status") => {
             println!("{}",serde_json::to_string_pretty(&gateway_status()?).map_err(|e| e.to_string())?);
@@ -452,6 +498,7 @@ fn run() -> AppResult<()> {
             println!("  mcp            Run local stdio MCP server");
             println!("  native-messaging  Browser extension status host (no SSH command API)");
             println!("  register-chrome EXTENSION_ID  Restrict native-host status to this extension");
+            println!("  tunnel init ID | doctor | run  Official OpenAI Secure MCP Tunnel integration");
             println!("  install        Print platform-specific setup guidance");
             Ok(())
         }
@@ -483,6 +530,12 @@ mod tests {
     fn no_arbitrary_command_tool() {
         assert!(tools().iter().all(|t|t["name"] != "execute_command"));
         assert!(tool_call(&json!({"name":"run_shell","arguments":{"command":"whoami"}})).is_err());
+    }
+    #[test]
+    fn tunnel_id_input_is_bounded() {
+        assert!(tunnel_id_valid("tunnel_0123456789abcdef0123456789abcdef"));
+        assert!(!tunnel_id_valid("tunnel_;rm -rf /"));
+        assert!(!tunnel_id_valid("unknown"));
     }
     #[test]
     fn notifications_have_no_response() {

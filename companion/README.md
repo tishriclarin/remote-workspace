@@ -62,3 +62,17 @@ Optional status-only extension sources are in [browser/chromium](../browser/chro
 ## CI and verification
 
 Run `cargo test` and `cargo build --release`. GitHub Actions artifacts include a desktop-only plugin ZIP generated from the native binary and checked by MCP smoke tests; these are unsigned CI products, **not verified installers**. See [workflow](../.github/workflows/companion-build.yml).
+
+## Supported private ChatGPT tunnel (developer connection)
+
+The official OpenAI Secure MCP Tunnel client supports stdio MCP targets. SSH Workspace now provides a small convenience CLI that creates a dedicated profile for the currently installed Rust companion. It uses only the installed, official tunnel-client executable and does not ask for or write API keys itself.
+
+1. Obtain the supported tunnel-client and a tunnel ID from https://platform.openai.com/settings/organization/tunnels.
+2. Provide CONTROL_PLANE_API_KEY through the runtime's secure environment or system secret storage; never paste it into ChatGPT.
+3. Run SSH Workspace commands shown below.
+
+    sshworkspace tunnel init tunnel_0123456789abcdef0123456789abcdef
+    sshworkspace tunnel doctor
+    sshworkspace tunnel run
+
+The last command intentionally runs in the foreground. Tunnel credentials and authorization remain managed by OpenAI's official client. The local gateway still initiates every SSH connection. This private tunnel option does not meet the stable public endpoint requirement for a publicly published remote-MCP plugin.
