@@ -1,6 +1,6 @@
 # SSH Workspace 0.7.0 — native companion
 
-This directory introduces a **native Rust SSH + MCP engine** alongside the existing Python desktop plugin. Local-first means the device running the companion initiates SSH and holds authentication material. The centralized HTTPS MCP gateway remains an **optional** setting. The companion is not a centralized SSH proxy.
+This directory introduces a **native Rust SSH + MCP engine** as the sole supported application implementation. Local-first means the device running the companion initiates SSH and holds authentication material. The centralized HTTPS MCP gateway remains an **optional** setting. The companion is not a centralized SSH proxy.
 
 ## Connection routing: reuse the existing ChatGPT session by default
 
@@ -15,7 +15,7 @@ A centralized SSH gateway is always optional. Secure MCP Tunnel is an opt-in fal
 - Self-contained Rust CLI/MCP executable using an embedded libssh2 SSH engine. No external OpenSSH or Python runtime required for these new diagnostic tools.
 - Defaults to `client` mode. `central` is an explicit configuration choice.
 - Strict host-key pinning against an existing OpenSSH `known_hosts` file; unknown or changed keys are rejected.
-- Authentication using a local private key file or SSH agent. Password storage is **not yet implemented** in the Rust binary; the existing Python vault remains available for legacy desktop deployments.
+- Authentication using a local private key file or SSH agent. Password storage is **not yet implemented** in the Rust binary; there is no Python fallback.
 - Six read-only MCP tools: gateway status, installation guidance, host aliases, connectivity, OS/CPU, uptime.
 - Browser Native Messaging accepts **status and installation guidance only**. It cannot execute SSH commands and requires an explicitly installed and ID-restricted browser extension.
 - GitHub Actions packages a desktop plugin ZIP and builds reviewable **unsigned** artifacts for Linux x64/ARM64, Windows x64 and macOS Intel/Apple Silicon. Actual runner availability and build results must be checked.
@@ -104,4 +104,8 @@ Commands:
     sshworkspace backup status
     sshworkspace backup restore ~/sshworkspace-backups/sshworkspace-example.vault --confirm
 
-The cloud-sync option writes **ciphertext only** to a folder that the user already synchronizes with their chosen cloud provider. It is **not** a native Google Drive/OneDrive/S3 API integration and cannot verify cloud synchronization or cloud-server durability. The local `vault.key` is *never* included in these backup archives. Recovery on a replacement device requires separately preserving that key securely; a passphrase-wrapped recovery workflow is a future requirement. Legacy plaintext `hosts.json` requires explicit `vault migrate`; the original remains until the owner verifies and removes it. The companion does not delete legacy data silently. The secure vault is device-local; the central SSH gateway remains optional.
+The cloud-sync option writes **ciphertext only** to a folder that the user already synchronizes with their chosen cloud provider. It is **not** a native Google Drive/OneDrive/S3 API integration and cannot verify cloud synchronization or cloud-server durability. The local `vault.key` is *never* included in these backup archives. Recovery on a replacement device requires separately preserving that key securely; a passphrase-wrapped recovery workflow is a future requirement. Previously exported plaintext `hosts.json` requires explicit `vault migrate`; the original remains until the owner verifies and removes it. The companion does not delete legacy data silently. The secure vault is device-local; the central SSH gateway remains optional.
+
+## Android device deployment status
+
+The CI Linux aarch64 artifact targets GNU/Linux, **not Android**. Do not install it as an Android APK or claim it is a ChatGPT Android custom plugin. Android requires an Android-targeted build, native packaging, and a verified supported ChatGPT connection/installation interface. Termux may be used as a separate, explicitly approved local test host, but does not provide ChatGPT Android with an automatic local MCP channel. No installation on a user's device has been performed.
