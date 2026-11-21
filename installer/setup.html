@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SSH Workspace — Companion Setup</title>
+<style>
+:root{color-scheme:dark;background:#0e1b27;color:#f4f9fb;font-family:system-ui,sans-serif}
+body{max-width:720px;margin:40px auto;padding:0 20px}
+h1{font-size:28px}h2{font-size:20px;margin-top:28px}p{line-height:1.6;color:#c8d6df}
+.panel{background:#192b3a;border:1px solid #345064;border-radius:12px;padding:22px}
+button{background:#19d2ae;color:#072824;border:0;border-radius:8px;padding:14px 19px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+code{background:#0a131c;padding:3px 5px;border-radius:4px}
+a{color:#79d8fb}
+small{color:#adbfca}
+</style></head>
+<body>
+<h1>SSH Workspace</h1>
+<p>Native SSH companion setup · local gateway by default · centralized gateway optional</p>
+<div class="panel">
+  <h2>Detected platform</h2>
+  <p id="platform" role="status">Detecting OS and architecture…</p>
+  <p id="recommendation"></p>
+  <button id="install" disabled>Find companion installer</button>
+  <p><small id="explanation"></small></p>
+</div>
+<h2>After installation</h2>
+<p>Run <code>sshworkspace setup</code> once, then register the binary as a local stdio MCP server where that connection type is supported. To switch gateway modes, use <code>sshworkspace gateway client</code> or <code>sshworkspace gateway central HTTPS_URL</code>.</p>
+<h2>Security requirements</h2>
+<p>OS and browser authorization is mandatory. This page never executes downloads or remote commands silently. Only verified, publisher-signed installers should be offered as production one-click packages; development artifacts are unsigned.</p>
+<p><a href="https://github.com/tishriclarin/ssh-workspace">Project repository</a></p>
+<script src="setup.js"></script>
+</body></html>
