@@ -5,8 +5,8 @@ This directory introduces a **native Rust SSH + MCP engine** alongside the exist
 ## Current implementation
 
 - Self-contained Rust CLI/MCP executable using an embedded libssh2 SSH engine. No external OpenSSH or Python runtime required for these new diagnostic tools.
-- Defaults to \`client\` mode. \`central\` is an explicit configuration choice.
-- Strict host-key pinning against an existing OpenSSH \`known_hosts\` file; unknown or changed keys are rejected.
+- Defaults to `client` mode. `central` is an explicit configuration choice.
+- Strict host-key pinning against an existing OpenSSH `known_hosts` file; unknown or changed keys are rejected.
 - Authentication using a local private key file or SSH agent. Password storage is **not yet implemented** in the Rust binary; the existing Python vault remains available for legacy desktop deployments.
 - Six read-only MCP tools: gateway status, installation guidance, host aliases, connectivity, OS/CPU, uptime.
 - Browser Native Messaging accepts **status and installation guidance only**. It cannot execute SSH commands and requires an explicitly installed and ID-restricted browser extension.
@@ -14,26 +14,26 @@ This directory introduces a **native Rust SSH + MCP engine** alongside the exist
 
 ## Local use
 
-\`\`\`sh
+```sh
 cd companion
 cargo build --release
 ./target/release/sshworkspace setup
 ./target/release/sshworkspace host add lab 192.0.2.10 operator 22 ~/.ssh/id_ed25519
 ./target/release/sshworkspace doctor
 ./target/release/sshworkspace mcp
-\`\`\`
+```
 
-Replace example host and username with an authorized system, and independently verify its SSH host-key fingerprint before adding an entry to \`~/.ssh/known_hosts\`. Do **not** blindly trust an \`ssh-keyscan\` result. The program never disables strict host-key checks.
+Replace example host and username with an authorized system, and independently verify its SSH host-key fingerprint before adding an entry to `~/.ssh/known_hosts`. Do **not** blindly trust an `ssh-keyscan` result. The program never disables strict host-key checks.
 
-By default settings and host aliases are stored in the current user's SSH Workspace configuration directory (Windows \`%APPDATA%\\ssh-workspace\`, macOS \`~/Library/Application Support/ssh-workspace\`, Linux \`~/.config/ssh-workspace\`). Set \`SSHWORKSPACE_HOME\` to override. Unix config files are owner-only.
+By default settings and host aliases are stored in the current user's SSH Workspace configuration directory (Windows `%APPDATA%\\ssh-workspace`, macOS `~/Library/Application Support/ssh-workspace`, Linux `~/.config/ssh-workspace`). Set `SSHWORKSPACE_HOME` to override. Unix config files are owner-only.
 
 ## Gateway options
 
-\`\`\`sh
+```sh
 sshworkspace gateway client
 sshworkspace gateway central https://your-domain.example/mcp
 sshworkspace status
-\`\`\`
+```
 
 Central mode records the HTTPS endpoint but **does not implement transparent remote forwarding**. To use a centralized gateway, register that server's MCP endpoint through ChatGPT's supported connection flow.
 
@@ -47,7 +47,7 @@ The native companion is designed to support these later integrations without mov
 
 ## Security boundaries
 
-- No generic \`run_command\`, terminal, credential reveal, or unsafe tool; fixed, bounded diagnostic commands only.
+- No generic `run_command`, terminal, credential reveal, or unsafe tool; fixed, bounded diagnostic commands only.
 - Local SSH and host-key verification are performed by this binary, not by ChatGPT.
 - Agent key or private key file remains local; no password database is created.
 - Do not run the native messaging helper on an unrestricted browser extension origin.
@@ -57,4 +57,4 @@ The native companion is designed to support these later integrations without mov
 
 ## CI and verification
 
-Run \`cargo test\` and \`cargo build --release\`. GitHub Actions upload artifacts are unsigned CI products, **not verified installers**. See [workflow](../.github/workflows/companion-build.yml).
+Run `cargo test` and `cargo build --release`. GitHub Actions upload artifacts are unsigned CI products, **not verified installers**. See [workflow](../.github/workflows/companion-build.yml).
