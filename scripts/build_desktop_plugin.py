@@ -55,14 +55,13 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         shutil.copy2(binary, executable)
         if name != "remoteworkspace.exe":
             executable.chmod(0o755)
-        root_placeholder = "$" + "{PLUGIN_ROOT}"
         mcp_entry = {
             "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
             "mcpServers": {
                 "remote-workspace": {
                     "type": "stdio",
-                    "command": root_placeholder + "/bin/" + name,
-                    "args": ["mcp"], "cwd": root_placeholder
+                    "command": "./bin/" + name,
+                    "args": ["mcp"], "cwd": "./"
                 }
             }
         }
@@ -116,13 +115,6 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
             target_skill = stage / "skills" / skill / "SKILL.md"
             target_skill.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(skill_source, target_skill)
-        skill_path = stage / "skills/remote-workspace/SKILL.md"
-        skill_path.parent.mkdir(parents=True)
-        skill_path.write_text(
-            "---\nname: remote-workspace\ndescription: Local-first authorized SSH diagnostics.\n---\n\n"
-            "# Remote Workspace\nLoad remote-safety and remote-workspace skills before any remote action.\nUse only saved host aliases. Never ask for credentials in chat.\n"
-            "Only fixed read-only diagnostics are available. Do not claim arbitrary shell access.\n"
-            "Never disable strict SSH host-key checks.\n", encoding="utf-8")
         # Make the policy and operator documentation visible in each packaged plugin.
         documentation = (
             "AGENTS.md", "docs/DEVICE_POLICY.md", "gateway/README.md"

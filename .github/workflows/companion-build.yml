@@ -5,11 +5,29 @@ on:
     paths:
       - 'companion/**'
       - 'scripts/**'
+      - 'skills/**'
+      - 'assets/logo.webp'
+      - 'AGENTS.md'
+      - 'docs/DEVICE_POLICY.md'
+      - 'gateway/README.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - 'installer/**'
+      - 'browser/chromium/**'
       - '.github/workflows/companion-build.yml'
   pull_request:
     paths:
       - 'companion/**'
       - 'scripts/**'
+      - 'skills/**'
+      - 'assets/logo.webp'
+      - 'AGENTS.md'
+      - 'docs/DEVICE_POLICY.md'
+      - 'gateway/README.md'
+      - 'LICENSE'
+      - 'NOTICE'
+      - 'installer/**'
+      - 'browser/chromium/**'
       - '.github/workflows/companion-build.yml'
   workflow_dispatch:
 concurrency:
