@@ -11,11 +11,11 @@ import tempfile
 import zipfile
 
 TARGETS = {
-    "x86_64-unknown-linux-gnu": ("linux-x64", "sshworkspace", b"\x7fELF"),
-    "aarch64-unknown-linux-gnu": ("linux-arm64", "sshworkspace", b"\x7fELF"),
-    "x86_64-pc-windows-msvc": ("windows-x64", "sshworkspace.exe", b"MZ"),
-    "x86_64-apple-darwin": ("macos-intel", "sshworkspace", None),
-    "aarch64-apple-darwin": ("macos-arm64", "sshworkspace", None),
+    "x86_64-unknown-linux-gnu": ("linux-x64", "remoteworkspace", b"\x7fELF"),
+    "aarch64-unknown-linux-gnu": ("linux-arm64", "remoteworkspace", b"\x7fELF"),
+    "x86_64-pc-windows-msvc": ("windows-x64", "remoteworkspace.exe", b"MZ"),
+    "x86_64-apple-darwin": ("macos-intel", "remoteworkspace", None),
+    "aarch64-apple-darwin": ("macos-arm64", "remoteworkspace", None),
 }
 MACHO = {b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf",
          b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca"}
@@ -46,20 +46,20 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
     if magic is None and header not in MACHO:
         raise ValueError("Expected a Mach-O binary")
     output.mkdir(parents=True, exist_ok=True)
-    filename = "ssh-workspace-desktop-v{}-{}.zip".format(version, label)
+    filename = "remote-workspace-desktop-v{}-{}.zip".format(version, label)
     archive = output / filename
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp)
         executable = stage / "bin" / name
         executable.parent.mkdir()
         shutil.copy2(binary, executable)
-        if name != "sshworkspace.exe":
+        if name != "remoteworkspace.exe":
             executable.chmod(0o755)
         root_placeholder = "$" + "{PLUGIN_ROOT}"
         mcp_entry = {
             "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
             "mcpServers": {
-                "ssh-workspace": {
+                "remote-workspace": {
                     "type": "stdio",
                     "command": root_placeholder + "/bin/" + name,
                     "args": ["mcp"], "cwd": root_placeholder
@@ -69,13 +69,13 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
         json_file(stage / "mcp.json", mcp_entry)
         json_file(stage / ".mcp.json", mcp_entry)
         manifest = {
-            "name": "ssh-workspace", "version": version,
+            "name": "remote-workspace", "version": version,
             "description": "Local-first, read-only SSH diagnostics from a native companion.",
-            "repository": "https://github.com/tishriclarin/ssh-workspace",
+            "repository": "https://github.com/tishriclarin/remote-workspace",
             "mcpServers": "./.mcp.json", "skills": "./skills/",
             "requires_local_executor": True,
             "interface": {
-                "displayName": "SSH Workspace",
+                "displayName": "Remote Workspace",
                 "shortDescription": "Local SSH host diagnostics",
                 "longDescription": "Inspect authorized SSH hosts from your own computer. Host keys are pinned. No generic shell command or credential disclosure tools.",
                 "category": "Developer Tools", "capabilities": ["Read"],
@@ -93,7 +93,7 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
                 "logo": "./assets/logo.webp", "composerIcon": "./assets/logo.webp"})
         json_file(stage / "plugin.json", {
             "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-            "name": "ssh-workspace", "version": version,
+            "name": "remote-workspace", "version": version,
             "description": manifest["description"],
             "repository": manifest["repository"],
             "license": "MIT",
@@ -116,11 +116,11 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
             target_skill = stage / "skills" / skill / "SKILL.md"
             target_skill.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(skill_source, target_skill)
-        skill_path = stage / "skills/ssh-workspace/SKILL.md"
+        skill_path = stage / "skills/remote-workspace/SKILL.md"
         skill_path.parent.mkdir(parents=True)
         skill_path.write_text(
-            "---\nname: ssh-workspace\ndescription: Local-first authorized SSH diagnostics.\n---\n\n"
-            "# SSH Workspace\nLoad remote-safety and remote-workspace skills before any remote action.\nUse only saved host aliases. Never ask for credentials in chat.\n"
+            "---\nname: remote-workspace\ndescription: Local-first authorized SSH diagnostics.\n---\n\n"
+            "# Remote Workspace\nLoad remote-safety and remote-workspace skills before any remote action.\nUse only saved host aliases. Never ask for credentials in chat.\n"
             "Only fixed read-only diagnostics are available. Do not claim arbitrary shell access.\n"
             "Never disable strict SSH host-key checks.\n", encoding="utf-8")
         # Make the policy and operator documentation visible in each packaged plugin.
@@ -151,7 +151,7 @@ def package(binary: Path, target: str, version: str, output: Path, root: Path) -
                     continue
                 info = zipfile.ZipInfo(path.relative_to(stage).as_posix(), (2026,1,1,0,0,0))
                 info.compress_type = zipfile.ZIP_DEFLATED
-                mode = 0o755 if path == executable and name != "sshworkspace.exe" else 0o644
+                mode = 0o755 if path == executable and name != "remoteworkspace.exe" else 0o644
                 info.external_attr = (0o100000 | mode) << 16
                 zipf.writestr(info, path.read_bytes())
     (output / (filename + ".sha256")).write_text(
