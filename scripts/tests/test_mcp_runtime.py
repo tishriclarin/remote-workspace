@@ -42,7 +42,7 @@ class MCPRuntimeTests(unittest.TestCase):
         self.assertEqual([m["id"] for m in result], [1,2,3,4])
         self.assertEqual(result[0]["result"]["protocolVersion"], "2025-03-26")
         tools = result[1]["result"]["tools"]
-        self.assertEqual(len(tools), 6)
+        self.assertEqual(len(tools), 7)
         self.assertTrue(all(t["annotations"]["readOnlyHint"] for t in tools))
         self.assertFalse(any(t["name"] == "run_command" for t in tools))
         status = json.loads(result[2]["result"]["content"][0]["text"])
@@ -71,6 +71,10 @@ class MCPRuntimeTests(unittest.TestCase):
         self.assertEqual(json.loads(result[0]["result"]["content"][0]["text"]),
                          {"aliases":["branch"]})
         self.assertNotIn("192.0.2.22", json.dumps(result))
+        self.assertFalse((Path(self.temp.name) / "hosts.json").exists())
+        vault_data = (Path(self.temp.name) / "hosts.vault").read_bytes()
+        self.assertNotIn(b"192.0.2.22", vault_data)
+        self.assertTrue(vault_data.startswith(b"SSHWSVLT1"))
 
     def test_user_owned_install_does_not_require_administrator(self):
         dest = Path(self.temp.name) / "native-install"
@@ -81,6 +85,31 @@ class MCPRuntimeTests(unittest.TestCase):
         name = "sshworkspace.exe" if os.name == "nt" else "sshworkspace"
         self.assertTrue((dest / name).is_file())
         self.assertIn("Installed SSH Workspace",result.stdout)
+
+    def test_encrypted_local_and_cloud_sync_backups(self):
+        add = subprocess.run([BINARY, "host", "add", "backup-test", "192.0.2.40", "operator"],
+                             env=self.env,capture_output=True,text=True,timeout=20)
+        self.assertEqual(add.returncode, 0, add.stderr)
+        for mode in ["local","cloud-sync"]:
+            dest = Path(self.temp.name) / ("backup-" + mode)
+            set_result = subprocess.run([BINARY, "backup", "configure", mode, str(dest)],
+                                        env=self.env,capture_output=True,text=True,timeout=20)
+            self.assertEqual(set_result.returncode,0,set_result.stderr)
+            backup = subprocess.run([BINARY, "backup", "run", "Before lab changes"],
+                                    env=self.env,capture_output=True,text=True,timeout=20)
+            self.assertEqual(backup.returncode,0,backup.stderr)
+            receipt=json.loads(backup.stdout)
+            self.assertTrue(receipt["encrypted"])
+            self.assertFalse(receipt["key_included"])
+            self.assertEqual(receipt["description"], "Before lab changes")
+            archive=dest / receipt["backup_name"]
+            self.assertTrue(archive.is_file())
+            self.assertNotIn(b"192.0.2.40",archive.read_bytes())
+            self.assertFalse((dest / "vault.key").exists())
+        restore = subprocess.run([BINARY, "backup", "restore",
+                                  str(archive), "--confirm"],
+                                  env=self.env,capture_output=True,text=True,timeout=20)
+        self.assertEqual(restore.returncode,0,restore.stderr)
 
     def test_central_mode_is_explicit(self):
         result = subprocess.run([BINARY, "gateway", "central", "https://example.invalid/mcp"],

@@ -88,3 +88,20 @@ The last command intentionally runs in the foreground. Tunnel credentials and au
 ## Self-contained desktop installation
 
 After downloading and approving the appropriate native executable, run sshworkspace install --user once. It copies itself atomically to a per-user private application directory without root/admin privileges or third-party dependencies. The command does not silently modify your PATH or install a browser extension. Run sshworkspace register-chrome EXTENSION_ID only after the browser extension has been approved. OS signing and production auto-update remain pending.
+
+## Encrypted host vault and backups
+
+New companion installations store authorized host records in `hosts.vault`, encrypted with **XChaCha20-Poly1305**. A random local 256-bit key is held separately in `vault.key` with owner-only permissions where supported. SSH account metadata, host addresses, ports and SSH key/certificate references are encrypted in the inventory. Private SSH key files themselves remain externally managed. **OS keychain wrapping and passwords are planned, not yet available.**
+
+Commands:
+
+    sshworkspace setup
+    sshworkspace vault status
+    sshworkspace vault migrate
+    sshworkspace backup configure local ~/sshworkspace-backups
+    sshworkspace backup configure cloud-sync ~/MyCloudSync/sshworkspace-backups
+    sshworkspace backup run "before router upgrade"
+    sshworkspace backup status
+    sshworkspace backup restore ~/sshworkspace-backups/sshworkspace-example.vault --confirm
+
+The cloud-sync option writes **ciphertext only** to a folder that the user already synchronizes with their chosen cloud provider. It is **not** a native Google Drive/OneDrive/S3 API integration and cannot verify cloud synchronization or cloud-server durability. The local `vault.key` is *never* included in these backup archives. Recovery on a replacement device requires separately preserving that key securely; a passphrase-wrapped recovery workflow is a future requirement. Legacy plaintext `hosts.json` requires explicit `vault migrate`; the original remains until the owner verifies and removes it. The companion does not delete legacy data silently. The secure vault is device-local; the central SSH gateway remains optional.

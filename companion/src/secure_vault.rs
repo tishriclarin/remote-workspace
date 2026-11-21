@@ -269,7 +269,8 @@ mod tests {
         let path = root.path().join("hosts.vault");
         let mut encrypted = fs::read(&path).unwrap();
         assert!(!String::from_utf8_lossy(&encrypted).contains("demo"));
-        encrypted[encrypted.len()-1] ^= 1;
+        let last = encrypted.len() - 1;
+        encrypted[last] ^= 1;
         fs::write(path, encrypted).unwrap();
         assert!(read(root.path()).is_err());
     }
