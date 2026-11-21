@@ -76,3 +76,7 @@ The official OpenAI Secure MCP Tunnel client supports stdio MCP targets. SSH Wor
     sshworkspace tunnel run
 
 The last command intentionally runs in the foreground. Tunnel credentials and authorization remain managed by OpenAI's official client. The local gateway still initiates every SSH connection. This private tunnel option does not meet the stable public endpoint requirement for a publicly published remote-MCP plugin.
+
+## Self-contained desktop installation
+
+After downloading and approving the appropriate native executable, run sshworkspace install --user once. It copies itself atomically to a per-user private application directory without root/admin privileges or third-party dependencies. The command does not silently modify your PATH or install a browser extension. Run sshworkspace register-chrome EXTENSION_ID only after the browser extension has been approved. OS signing and production auto-update remain pending.

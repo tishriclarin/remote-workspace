@@ -9,8 +9,12 @@ on:
   pull_request:
     paths:
       - 'companion/**'
+      - 'scripts/**'
       - '.github/workflows/companion-build.yml'
   workflow_dispatch:
+concurrency:
+  group: native-ssh-companion-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:

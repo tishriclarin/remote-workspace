@@ -72,6 +72,16 @@ class MCPRuntimeTests(unittest.TestCase):
                          {"aliases":["branch"]})
         self.assertNotIn("192.0.2.22", json.dumps(result))
 
+    def test_user_owned_install_does_not_require_administrator(self):
+        dest = Path(self.temp.name) / "native-install"
+        env = {**self.env, "SSHWORKSPACE_INSTALL_ROOT": str(dest)}
+        result = subprocess.run([BINARY,"install","--user"],env=env,
+                                capture_output=True,text=True,timeout=30)
+        self.assertEqual(result.returncode,0,result.stderr)
+        name = "sshworkspace.exe" if os.name == "nt" else "sshworkspace"
+        self.assertTrue((dest / name).is_file())
+        self.assertIn("Installed SSH Workspace",result.stdout)
+
     def test_central_mode_is_explicit(self):
         result = subprocess.run([BINARY, "gateway", "central", "https://example.invalid/mcp"],
                                 env=self.env, text=True, capture_output=True, timeout=20)
