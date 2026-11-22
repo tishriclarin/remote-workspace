@@ -56,11 +56,11 @@ fi
 initialized=false
 listed=false
 while IFS= read -r response; do
-  if [[ "$response" =~ \\"id\\"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$) ]] &&
+  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$) ]] &&
      [[ "$response" == *'"protocolVersion"'* ]]; then
     initialized=true
   fi
-  if [[ "$response" =~ \\"id\\"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$) ]] &&
+  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$) ]] &&
      [[ "$response" == *'"tools"'* ]]; then
     listed=true
   fi
