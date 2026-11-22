@@ -59,7 +59,17 @@ if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$)' "$REPORT" || 
   echo 'FAIL: MCP tool listing missing' >&2
   exit 1
 fi
-if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*3([[:space:]]*[,}]|$)' "$REPORT" || ! grep -Eq '"isError"[[:space:]]*:[[:space:]]*true|"code"[[:space:]]*:[[:space:]]*-32601' "$REPORT"; then
+# MCP stdio uses one JSON-RPC response per line. The rejection must belong
+# to request 3, not an unrelated error response on another line.
+rejected=false
+while IFS= read -r response; do
+  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*3([[:space:]]*[,}]|$) ]] &&
+     [[ "$response" =~ \"isError\"[[:space:]]*:[[:space:]]*true|\"code\"[[:space:]]*:[[:space:]]*-32601 ]]; then
+    rejected=true
+    break
+  fi
+done < "$REPORT"
+if [[ "$rejected" != true ]]; then
   echo 'FAIL: unsafe tool was not rejected' >&2
   exit 1
 fi
