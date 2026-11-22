@@ -51,11 +51,25 @@ if grep -Eq '"name"[[:space:]]*:[[:space:]]*"(execute_command|run_shell)"' "$REP
   echo 'FAIL: unsafe command tool exposed' >&2
   exit 1
 fi
-if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$)' "$REPORT" || ! grep -q '"protocolVersion"' "$REPORT"; then
+# MCP stdio returns one JSON-RPC response per line. Correlate response IDs
+# with their required fields so unrelated messages cannot satisfy the checks.
+initialized=false
+listed=false
+while IFS= read -r response; do
+  if [[ "$response" =~ \\"id\\"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$) ]] &&
+     [[ "$response" == *'"protocolVersion"'* ]]; then
+    initialized=true
+  fi
+  if [[ "$response" =~ \\"id\\"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$) ]] &&
+     [[ "$response" == *'"tools"'* ]]; then
+    listed=true
+  fi
+done < "$REPORT"
+if [[ "$initialized" != true ]]; then
   echo 'FAIL: MCP initialization response missing' >&2
   exit 1
 fi
-if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$)' "$REPORT" || ! grep -q '"tools"' "$REPORT"; then
+if [[ "$listed" != true ]]; then
   echo 'FAIL: MCP tool listing missing' >&2
   exit 1
 fi
