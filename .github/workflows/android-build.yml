@@ -6,11 +6,15 @@ on:
       - 'companion/**'
       - '.github/workflows/android-build.yml'
       - 'scripts/test-termux-android.sh'
+      - 'AGENTS.md'
+      - 'skills/**'
   pull_request:
     paths:
       - 'companion/**'
       - '.github/workflows/android-build.yml'
       - 'scripts/test-termux-android.sh'
+      - 'AGENTS.md'
+      - 'skills/**'
   workflow_dispatch:
 concurrency:
   group: android-arm64-${{ github.workflow }}-${{ github.ref }}
