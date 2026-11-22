@@ -129,19 +129,19 @@ jobs:
           set -euo pipefail
           mock_dir=$(mktemp -d)
           trap 'rm -rf -- "$mock_dir"' EXIT
-          printf '#!/bin/sh\\nprintf "aarch64\\n"\\n' > "$mock_dir/uname"
-          printf '#!/bin/sh\\nprintf "28\\n"\\n' > "$mock_dir/getprop"
+          printf '#!/bin/sh\nprintf "aarch64\n"\n' > "$mock_dir/uname"
+          printf '#!/bin/sh\nprintf "28\n"\n' > "$mock_dir/getprop"
           cat > "$mock_dir/companion" <<'MOCK'
           #!/bin/sh
           if [ "$1" = doctor ]; then exit 0; fi
           if [ "$1" != mcp ]; then exit 99; fi
           cat >/dev/null
-          printf '%s\\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26"}}' '{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_hosts"}]}}' '{"jsonrpc":"2.0","id":3,"error":{"code":-32601}}'
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26"}}' '{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_hosts"}]}}' '{"jsonrpc":"2.0","id":3,"error":{"code":-32601}}'
           MOCK
           chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
           output=$(PATH="$mock_dir:$PATH" TMPDIR="$mock_dir" bash scripts/test-termux-android.sh "$mock_dir/companion")
           if [[ "$output" != *'PASS: prebuilt Android binary initialized MCP and rejected unsafe write'* ]]; then
-            printf 'Expected successful MCP smoke test, got: %s\\n' "$output" >&2
+            printf 'Expected successful MCP smoke test, got: %s\n' "$output" >&2
             exit 1
           fi
       - name: Test native Rust code on Linux host
