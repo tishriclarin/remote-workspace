@@ -87,6 +87,16 @@ jobs:
             printf 'Expected API 28 to invoke companion doctor (exit 73), got %s\\n' "$status" >&2
             exit 1
           fi
+      - name: Regression test formatted unsafe MCP tool listing
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep the smoke-test rejection guard sensitive to pretty-printed JSON.
+          fixture='{"tools":[{"name" : "execute_command"}]}'
+          if ! grep -Eq '"name"[[:space:]]*:[[:space:]]*"execute_command"' <<< "$fixture"; then
+            echo 'ERROR: formatted unsafe MCP tool escaped detection' >&2
+            exit 1
+          fi
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
