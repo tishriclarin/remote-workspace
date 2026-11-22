@@ -51,15 +51,15 @@ if grep -Eq '"name"[[:space:]]*:[[:space:]]*"execute_command"' "$REPORT"; then
   echo 'FAIL: unsafe command tool exposed' >&2
   exit 1
 fi
-if ! grep -q '"id":1' "$REPORT" || ! grep -q '"protocolVersion"' "$REPORT"; then
+if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$)' "$REPORT" || ! grep -q '"protocolVersion"' "$REPORT"; then
   echo 'FAIL: MCP initialization response missing' >&2
   exit 1
 fi
-if ! grep -q '"id":2' "$REPORT" || ! grep -q '"tools"' "$REPORT"; then
+if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$)' "$REPORT" || ! grep -q '"tools"' "$REPORT"; then
   echo 'FAIL: MCP tool listing missing' >&2
   exit 1
 fi
-if ! grep -q '"id":3' "$REPORT" || ! grep -Eq '"isError":[[:space:]]*true|"code":[[:space:]]*-32601' "$REPORT"; then
+if ! grep -Eq '"id"[[:space:]]*:[[:space:]]*3([[:space:]]*[,}]|$)' "$REPORT" || ! grep -Eq '"isError"[[:space:]]*:[[:space:]]*true|"code"[[:space:]]*:[[:space:]]*-32601' "$REPORT"; then
   echo 'FAIL: unsafe tool was not rejected' >&2
   exit 1
 fi
