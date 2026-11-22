@@ -47,7 +47,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"run_shell","arguments":{"command":"touch /tmp/unsafe"}}}' \
   | "$BIN" mcp > "$REPORT"
-if grep -q '"name":"execute_command"' "$REPORT"; then
+if grep -Eq '"name"[[:space:]]*:[[:space:]]*"execute_command"' "$REPORT"; then
   echo 'FAIL: unsafe command tool exposed' >&2
   exit 1
 fi
