@@ -99,9 +99,6 @@ jobs:
               exit 1
             fi
           done
-            echo 'ERROR: formatted unsafe MCP tool escaped detection' >&2
-            exit 1
-          fi
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
