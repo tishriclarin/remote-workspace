@@ -91,6 +91,26 @@ jobs:
             printf 'Expected API 28 to invoke companion doctor (exit 73), got %s\\n' "$status" >&2
             exit 1
           fi
+      - name: Reject missing jq before companion execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          mock_dir=$(mktemp -d)
+          trap 'rm -rf -- "$mock_dir"' EXIT
+          printf '#!/bin/sh\nprintf "aarch64\\n"\n' > "$mock_dir/uname"
+          printf '#!/bin/sh\nprintf "28\\n"\n' > "$mock_dir/getprop"
+          printf '#!/bin/sh\nprintf "INVOKED\\n" > "$TEST_MARKER"\n' > "$mock_dir/companion"
+          chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
+          # Deliberately exclude jq while retaining only required test commands.
+          marker="$mock_dir/invoked"
+          set +e
+          output=$(PATH="$mock_dir" TEST_MARKER="$marker" /bin/bash scripts/test-termux-android.sh "$mock_dir/companion" 2>&1)
+          status=$?
+          set -e
+          if [[ "$status" -ne 2 || "$output" != *'jq required for MCP smoke-test validation'* || -e "$marker" ]]; then
+            printf 'Expected missing jq rejection before companion execution, got %s: %s\n' "$status" "$output" >&2
+            exit 1
+          fi
       - name: Regression test formatted unsafe MCP tool listing
         shell: bash
         run: |
