@@ -47,44 +47,35 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"run_shell","arguments":{"command":"touch /tmp/unsafe"}}}' \
   | "$BIN" mcp > "$REPORT"
-if grep -Eq '"name"[[:space:]]*:[[:space:]]*"(execute_command|run_shell)"' "$REPORT"; then
-  echo 'FAIL: unsafe command tool exposed' >&2
+# Parse JSON-RPC structurally: a nested string or isError field is not an
+# MCP rejection. jq is required on the testing device, not by the companion.
+if ! command -v jq >/dev/null 2>&1; then
+  echo 'ERROR: jq required for MCP smoke-test validation' >&2
+  exit 2
+fi
+if ! verdict=$(jq -s -r '
+  if any(.[]; .jsonrpc == "2.0" and .id == 2 and
+      any(.result.tools[]?; .name == "execute_command" or .name == "run_shell"))
+  then "unsafe"
+  elif (any(.[]; .jsonrpc == "2.0" and .id == 1 and
+      (.result.protocolVersion | type == "string")) | not)
+  then "init"
+  elif (any(.[]; .jsonrpc == "2.0" and .id == 2 and
+      (.result.tools | type == "array")) | not)
+  then "list"
+  elif (any(.[]; .jsonrpc == "2.0" and .id == 3 and
+      (.result.isError == true or .error.code == -32601)) | not)
+  then "reject"
+  else "ok" end
+' "$REPORT"); then
+  echo 'FAIL: invalid MCP JSON-RPC output' >&2
   exit 1
 fi
-# MCP stdio returns one JSON-RPC response per line. Correlate response IDs
-# with their required fields so unrelated messages cannot satisfy the checks.
-initialized=false
-listed=false
-while IFS= read -r response; do
-  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*1([[:space:]]*[,}]|$) ]] &&
-     [[ "$response" == *'"protocolVersion"'* ]]; then
-    initialized=true
-  fi
-  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*2([[:space:]]*[,}]|$) ]] &&
-     [[ "$response" == *'"tools"'* ]]; then
-    listed=true
-  fi
-done < "$REPORT"
-if [[ "$initialized" != true ]]; then
-  echo 'FAIL: MCP initialization response missing' >&2
-  exit 1
-fi
-if [[ "$listed" != true ]]; then
-  echo 'FAIL: MCP tool listing missing' >&2
-  exit 1
-fi
-# MCP stdio uses one JSON-RPC response per line. The rejection must belong
-# to request 3, not an unrelated error response on another line.
-rejected=false
-while IFS= read -r response; do
-  if [[ "$response" =~ \"id\"[[:space:]]*:[[:space:]]*3([[:space:]]*[,}]|$) ]] &&
-     [[ "$response" =~ \"isError\"[[:space:]]*:[[:space:]]*true|\"code\"[[:space:]]*:[[:space:]]*-32601 ]]; then
-    rejected=true
-    break
-  fi
-done < "$REPORT"
-if [[ "$rejected" != true ]]; then
-  echo 'FAIL: unsafe tool was not rejected' >&2
-  exit 1
-fi
-echo 'PASS: prebuilt Android binary initialized MCP and rejected unsafe write'
+case "$verdict" in
+  unsafe) echo 'FAIL: unsafe command tool exposed' >&2; exit 1 ;;
+  init) echo 'FAIL: MCP initialization response missing' >&2; exit 1 ;;
+  list) echo 'FAIL: MCP tool listing missing' >&2; exit 1 ;;
+  reject) echo 'FAIL: unsafe tool was not rejected' >&2; exit 1 ;;
+  ok) echo 'PASS: prebuilt Android binary initialized MCP and rejected unsafe write' ;;
+  *) echo 'FAIL: unexpected MCP validation result' >&2; exit 1 ;;
+esac
