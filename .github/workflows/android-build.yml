@@ -264,6 +264,30 @@ jobs:
             printf 'Expected nested spoof rejection (exit 1), got %s: %s\n' "$status" "$output" >&2
             exit 1
           fi
+      - name: Reject duplicate MCP response IDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mock_dir=$(mktemp -d)
+          trap 'rm -rf -- "$mock_dir"' EXIT
+          printf '#!/bin/sh\nprintf "aarch64\n"\n' > "$mock_dir/uname"
+          printf '#!/bin/sh\nprintf "28\n"\n' > "$mock_dir/getprop"
+          cat > "$mock_dir/companion" <<'MOCK'
+          #!/bin/sh
+          if [ "$1" = doctor ]; then exit 0; fi
+          if [ "$1" != mcp ]; then exit 99; fi
+          cat >/dev/null
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26"}}' '{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_hosts"}]}}' '{"jsonrpc":"2.0","id":3,"result":{"isError":false}}' '{"jsonrpc":"2.0","id":3,"result":{"isError":true}}'
+          MOCK
+          chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
+          set +e
+          output=$(PATH="$mock_dir:$PATH" TMPDIR="$mock_dir" bash scripts/test-termux-android.sh "$mock_dir/companion" 2>&1)
+          status=$?
+          set -e
+          if [[ "$status" -ne 1 || "$output" != *'duplicate or missing MCP response IDs'* ]]; then
+            printf 'Expected duplicate-ID rejection (exit 1), got %s: %s\n' "$status" "$output" >&2
+            exit 1
+          fi
       - name: Test native Rust code on Linux host
         working-directory: companion
         run: cargo test
