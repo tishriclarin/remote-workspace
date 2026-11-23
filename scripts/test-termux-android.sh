@@ -57,8 +57,8 @@ printf '%s\n' \
 # Parse JSON-RPC structurally: a nested string or isError field is not an
 # MCP rejection. jq is required on the testing device, not by the companion.
 if ! verdict=$(jq -s -r '
-  # Require exactly one response per request to prevent duplicate-ID spoofing.
-  if ([.[] | select(.jsonrpc == "2.0" and (.id == 1 or .id == 2 or .id == 3)) | .id] | sort) != [1,2,3]
+  # Require exactly three responses with unique expected IDs; reject unsolicited responses.
+  if (([.[] | select(.jsonrpc == "2.0" and (.id == 1 or .id == 2 or .id == 3)) | .id] | sort) != [1,2,3]) or (length != 3)
   then "ids"
   elif any(.[]; .jsonrpc == "2.0" and .id == 2 and
       any(.result.tools[]?; .name == "execute_command" or .name == "run_shell"))
