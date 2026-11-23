@@ -22,7 +22,7 @@ if [[ ! "$SDK" =~ ^[0-9]+$ ]]; then
   echo 'ERROR: Android SDK property invalid' >&2
   exit 2
 fi
-# The Android artifact is compiled with cargo-ndk -p 28.
+# The Android artifact targets API 28 via CARGO_NDK_PLATFORM.
 if (( 10#$SDK < 28 )); then
   echo 'ERROR: Android API level 28 or newer required' >&2
   exit 2
@@ -38,6 +38,13 @@ if [[ ! -f "$BIN" || ! -x "$BIN" ]]; then
   exit 2
 fi
 
+# Validate local test dependencies before executing any supplied binary.
+# This avoids starting the companion only to discover the test cannot finish.
+if ! command -v jq >/dev/null 2>&1; then
+  echo 'ERROR: jq required for MCP smoke-test validation' >&2
+  exit 2
+fi
+
 "$BIN" doctor
 # Avoid predictable output paths and symlink clobbering; clean up after testing.
 REPORT=$(mktemp "${TMPDIR:-/data/data/com.termux/files/usr/tmp}/remote-workspace-mcp.XXXXXXXX")
@@ -49,10 +56,6 @@ printf '%s\n' \
   | "$BIN" mcp > "$REPORT"
 # Parse JSON-RPC structurally: a nested string or isError field is not an
 # MCP rejection. jq is required on the testing device, not by the companion.
-if ! command -v jq >/dev/null 2>&1; then
-  echo 'ERROR: jq required for MCP smoke-test validation' >&2
-  exit 2
-fi
 if ! verdict=$(jq -s -r '
   if any(.[]; .jsonrpc == "2.0" and .id == 2 and
       any(.result.tools[]?; .name == "execute_command" or .name == "run_shell"))
