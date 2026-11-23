@@ -181,7 +181,7 @@ jobs:
           if [ "$1" = doctor ]; then exit 0; fi
           if [ "$1" != mcp ]; then exit 99; fi
           cat >/dev/null
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26"}}' '{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_hosts"}]}}' '{"jsonrpc":"2.0","id":3,"result":{}}' '{"jsonrpc":"2.0","id":4,"result":{"isError":true}}'
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26"}}' '{"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_hosts"}]}}' '{"jsonrpc":"2.0","id":3,"result":{}}'
           MOCK
           chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
           set +e
