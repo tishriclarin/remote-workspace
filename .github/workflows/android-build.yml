@@ -202,8 +202,8 @@ jobs:
           set -euo pipefail
           mock_dir=$(mktemp -d)
           trap 'rm -rf -- "$mock_dir"' EXIT
-          printf '%s\n' '#!/bin/sh' 'printf "aarch64\\n"' > "$mock_dir/uname"
-          printf '%s\n' '#!/bin/sh' 'printf "28\\n"' > "$mock_dir/getprop"
+          printf '#!/bin/sh\nprintf "28\\n"\n' > "$mock_dir/getprop"
+          chmod 755 "$mock_dir/uname" "$mock_dir/getprop" "$mock_dir/companion"
           cat > "$mock_dir/companion" <<'MOCK'
           #!/bin/sh
           if [ "$1" = doctor ]; then exit 0; fi
