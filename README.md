@@ -48,3 +48,8 @@ Before connecting to a host, verify and pin its public SSH host key independentl
 ## Tracking
 
 [Signing](https://github.com/tishriclarin/remote-workspace/issues/1) · [Pairing/relay](https://github.com/tishriclarin/remote-workspace/issues/2) · [Android](https://github.com/tishriclarin/remote-workspace/issues/3) · [iOS](https://github.com/tishriclarin/remote-workspace/issues/4) · [Permission-controlled operations](https://github.com/tishriclarin/remote-workspace/issues/5)
+
+### Axion CLI management backlog
+
+- [ ] Make the self-hosted Rust gateway installable and manageable through Axion CLI using a versioned service manifest.
+- [ ] Verify gateway management permission changes and revocation, and integrate license handling where applicable. Preserve device pairing, per-device access restrictions and approval requirements.
